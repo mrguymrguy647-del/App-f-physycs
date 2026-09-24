@@ -36,6 +36,10 @@
           <div class="goal-label"><span>Today's goal</span><span><b id="goal-count">0</b> / <span id="goal-target">20</span> questions</span></div>
           <div class="bar"><div id="goal-fill"></div></div>
         </div>
+        <div class="diff-block">
+          <div class="diff-title">Difficulty</div>
+          <div class="diff-slot" data-slot="home"></div>
+        </div>
         <div class="hero-actions">
           <button class="btn primary big" id="btn-smart">🧠 Smart Mix <small>focuses on your weak spots</small></button>
           <button class="btn big" id="btn-lab">🎯 Projectile Lab <small>aim a cannon with kinematics</small></button>
@@ -53,6 +57,10 @@
     <section id="view-topics" class="view">
       <h2>Choose a topic</h2>
       <p class="muted">Each round is 10 questions. Questions are randomly generated, so you'll never run out.</p>
+      <div class="card diff-block">
+        <div class="diff-title">Difficulty</div>
+        <div class="diff-slot" data-slot="topics"></div>
+      </div>
       <div class="grid topics" id="topic-grid"></div>
     </section>
 
@@ -61,16 +69,32 @@
       <div class="quiz-head">
         <button class="btn ghost small" id="quiz-quit">✕ Quit</button>
         <div class="quiz-progress"><div class="bar"><div id="quiz-fill"></div></div><span id="quiz-count">1 / 10</span></div>
+        <span class="pill" id="quiz-lives" title="Lives left" hidden></span>
         <span class="pill" id="quiz-streak" title="Answer streak">🔥 0</span>
+      </div>
+      <div class="timer" id="quiz-timer" hidden>
+        <div class="timer-fill" id="quiz-timer-fill"></div>
+        <span class="timer-text" id="quiz-timer-text"></span>
       </div>
       <div class="card question">
         <div class="q-topic" id="q-topic"></div>
         <p class="q-prompt" id="q-prompt"></p>
+        <div class="q-formula" id="q-formula" hidden></div>
+        <button class="btn ghost small peek" id="q-peek" hidden>💡 Show formula (half XP)</button>
         <div class="choices" id="q-choices"></div>
+        <form class="typed" id="q-typed" hidden autocomplete="off">
+          <label class="typed-field">
+            <span class="sr-only">Your answer</span>
+            <input id="q-input" type="text" inputmode="decimal" placeholder="Type your answer" enterkeyhint="done" />
+            <span class="typed-unit" id="q-unit"></span>
+          </label>
+          <button class="btn primary" type="submit" id="q-check">Check</button>
+          <p class="muted small typed-help">Round to 3 significant figures. Within 2% counts. Big numbers: 4.5e19 or 4.5x10^19.</p>
+        </form>
         <div class="feedback" id="q-feedback" hidden></div>
         <button class="btn primary" id="q-next" hidden>Next ➜</button>
       </div>
-      <p class="muted small center">Tip: press 1–4 to answer, Enter for the next question. Use g = 9.8 m/s².</p>
+      <p class="muted small center" id="quiz-tip">Tip: press 1–4 to answer, Enter for the next question.</p>
     </section>
 
     <!-- SUMMARY -->
@@ -78,6 +102,7 @@
       <div class="card center">
         <div class="big-emoji" id="sum-emoji">🎉</div>
         <h2 id="sum-title">Round complete!</h2>
+        <p class="muted" id="sum-diff"></p>
         <p class="sum-score"><b id="sum-score">0</b> / <span id="sum-total">10</span> correct · <b>+<span id="sum-xp">0</span> XP</b></p>
         <div class="hero-actions">
           <button class="btn primary" id="sum-again">Play again</button>
@@ -93,14 +118,25 @@
         <h2>🎯 Projectile Lab</h2>
         <div><span class="pill">Level <b id="lab-level">1</b></span> <span class="pill">Shots <b id="lab-shots">0</b></span></div>
       </div>
+      <div class="diff-slot compact" data-slot="lab"></div>
       <canvas id="lab-canvas" aria-label="Projectile simulation"></canvas>
       <div class="lab-controls card">
-        <label>Angle θ <output id="lab-angle-out">45°</output>
-          <input type="range" id="lab-angle" min="5" max="85" step="1" value="45" />
-        </label>
-        <label>Launch speed v <output id="lab-speed-out">20 m/s</output>
-          <input type="range" id="lab-speed" min="5" max="40" step="0.5" value="20" />
-        </label>
+        <div class="slider">
+          <label for="lab-angle">Angle θ <output id="lab-angle-out">45°</output></label>
+          <div class="slider-row">
+            <button class="nudge" data-for="lab-angle" data-step="-1" aria-label="Decrease angle">−</button>
+            <input type="range" id="lab-angle" min="5" max="85" step="1" value="45" />
+            <button class="nudge" data-for="lab-angle" data-step="1" aria-label="Increase angle">+</button>
+          </div>
+        </div>
+        <div class="slider">
+          <label for="lab-speed">Launch speed v <output id="lab-speed-out">20.0 m/s</output></label>
+          <div class="slider-row">
+            <button class="nudge" data-for="lab-speed" data-step="-0.1" aria-label="Decrease speed">−</button>
+            <input type="range" id="lab-speed" min="5" max="40" step="0.1" value="20" />
+            <button class="nudge" data-for="lab-speed" data-step="0.1" aria-label="Increase speed">+</button>
+          </div>
+        </div>
         <div class="lab-buttons">
           <button class="btn primary" id="lab-fire">🚀 Fire</button>
           <button class="btn" id="lab-hint">💡 Hint</button>
@@ -119,7 +155,7 @@
     <!-- FORMULAS -->
     <section id="view-formulas" class="view">
       <h2>Formula sheet</h2>
-      <p class="muted">Everything you need for the quizzes. g = 9.8 m/s².</p>
+      <p class="muted">Everything you need for the quizzes. g = 9.8 m/s² (Beginner rounds it to 10 m/s²).</p>
       <div class="grid formulas" id="formula-grid"></div>
     </section>
 
@@ -131,6 +167,10 @@
         <div class="card stat"><span class="stat-num" id="pr-answered">0</span><span class="muted">questions answered</span></div>
         <div class="card stat"><span class="stat-num" id="pr-days">0</span><span class="muted">day streak (best <span id="pr-bestdays">0</span>)</span></div>
         <div class="card stat"><span class="stat-num" id="pr-lab">0</span><span class="muted">lab targets hit</span></div>
+      </div>
+      <div class="card">
+        <h3>Best round per difficulty</h3>
+        <div class="best-grid" id="best-list"></div>
       </div>
       <div class="card">
         <h3>Topic mastery <span class="muted small">(based on your last 20 answers per topic)</span></h3>

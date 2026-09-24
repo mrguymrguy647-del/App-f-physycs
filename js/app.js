@@ -1,5 +1,5 @@
 /*
- * Physics Quest — app shell: navigation, quiz rounds, XP/levels, progress.
+ * Physics Quest — app shell: navigation, difficulty, quiz rounds, XP/levels, progress.
  */
 (function () {
   'use strict';
@@ -17,10 +17,14 @@
   function freshStats() {
     const topics = {};
     Q.TOPICS.forEach((t) => (topics[t.id] = { attempts: 0, correct: 0, recent: [] }));
+    const best = {};
+    Q.DIFFICULTIES.forEach((d) => (best[d.id] = null));
     return {
       xp: 0, answered: 0, correct: 0, bestStreak: 0,
+      difficulty: 'beginner',
+      best,
       topics,
-      lab: { hits: 0, shots: 0, level: 1 },
+      lab: { hits: 0, shots: 0, levels: { beginner: 1, medium: 1, hard: 1, hardcore: 1 } },
       dayStreak: 0, bestDayStreak: 0, lastDay: null,
       todayDate: null, todayCount: 0, goal: 20,
     };
@@ -32,8 +36,17 @@
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
       if (saved && typeof saved === 'object') {
         Object.assign(base, saved);
-        base.topics = Object.assign(freshStats().topics, saved.topics || {});
-        base.lab = Object.assign(freshStats().lab, saved.lab || {});
+        const fresh = freshStats();
+        base.topics = Object.assign(fresh.topics, saved.topics || {});
+        base.best = Object.assign(fresh.best, saved.best || {});
+        base.lab = Object.assign(fresh.lab, saved.lab || {});
+        base.lab.levels = Object.assign(fresh.lab.levels, (saved.lab && saved.lab.levels) || {});
+        // Saves from before difficulty levels existed were played on what is now Medium.
+        if (!saved.difficulty) {
+          base.difficulty = 'medium';
+          if (saved.lab && saved.lab.level) base.lab.levels.medium = saved.lab.level;
+        }
+        if (!Q.DIFF[base.difficulty]) base.difficulty = 'medium';
       }
     } catch (e) { /* storage unavailable or corrupt: start fresh */ }
     return base;
@@ -44,6 +57,7 @@
   }
 
   let stats = load();
+  const diff = () => Q.DIFF[stats.difficulty];
 
   // ---------- dates & streaks ----------
   function dayKey(d) {
@@ -96,6 +110,45 @@
     return m;
   }
 
+  // ---------- difficulty picker ----------
+  function renderDiffPickers() {
+    document.querySelectorAll('.diff-slot').forEach((slot) => {
+      const compact = slot.classList.contains('compact');
+      slot.innerHTML = '';
+      const group = document.createElement('div');
+      group.className = 'diff-picker';
+      group.setAttribute('role', 'radiogroup');
+      group.setAttribute('aria-label', 'Difficulty');
+      Q.DIFFICULTIES.forEach((d) => {
+        const b = document.createElement('button');
+        const active = d.id === stats.difficulty;
+        b.className = 'diff-opt diff-' + d.id + (active ? ' active' : '');
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String(active));
+        b.setAttribute('aria-label', d.name);
+        b.title = d.name;
+        b.innerHTML = `<span class="diff-icon">${d.icon}</span><span class="diff-name">${d.name}</span>`;
+        b.addEventListener('click', () => setDifficulty(d.id));
+        group.appendChild(b);
+      });
+      slot.appendChild(group);
+      if (!compact) {
+        const p = document.createElement('p');
+        p.className = 'diff-blurb muted small';
+        p.textContent = diff().blurb + (diff().xpMult > 1 ? ` XP ×${diff().xpMult}.` : '');
+        slot.appendChild(p);
+      }
+    });
+  }
+
+  function setDifficulty(id) {
+    if (id === stats.difficulty) return;
+    stats.difficulty = id;
+    save();
+    renderDiffPickers();
+    lab.setMode(id, stats.lab.levels[id] || 1);
+  }
+
   // ---------- views ----------
   const TAB_FOR_VIEW = { quiz: 'topics', summary: 'topics' };
 
@@ -112,7 +165,7 @@
 
   document.querySelectorAll('.tab').forEach((b) =>
     b.addEventListener('click', () => {
-      const leave = () => { quiz = null; showView(b.dataset.view); };
+      const leave = () => { stopTimer(); quiz = null; showView(b.dataset.view); };
       if (quiz && !quiz.done) askConfirm('Leave this round? The answers you already gave are saved.', 'Leave round', leave);
       else leave();
     })
@@ -167,7 +220,7 @@
     $('goal-target').textContent = stats.goal;
     $('goal-fill').style.width = Math.min(100, (100 * count) / stats.goal) + '%';
     $('greeting').textContent = count >= stats.goal
-      ? "🏆 Daily goal done — you're on fire!"
+      ? "🏆 Daily goal done! You're on fire!"
       : stats.answered === 0 ? 'Ready to level up your physics?' : 'Welcome back! Keep the streak going.';
     $('home-xp').textContent = stats.xp;
     $('home-acc').textContent = stats.answered ? Math.round((100 * stats.correct) / stats.answered) + '%' : '–';
@@ -181,7 +234,7 @@
     grid.innerHTML = '';
     const smart = document.createElement('button');
     smart.className = 'card topic smart';
-    smart.innerHTML = `<span class="topic-icon">🧠</span><b>Smart Mix</b><span class="muted small">All topics — more questions from your weakest ones</span>`;
+    smart.innerHTML = `<span class="topic-icon">🧠</span><b>Smart Mix</b><span class="muted small">All topics, with more questions from your weakest ones</span>`;
     smart.addEventListener('click', () => startQuiz('smart'));
     grid.appendChild(smart);
     Q.TOPICS.forEach((t) => {
@@ -216,6 +269,10 @@
     $('pr-bestdays').textContent = stats.bestDayStreak;
     $('pr-lab').textContent = stats.lab.hits;
     $('set-goal').value = String(stats.goal);
+    $('best-list').innerHTML = Q.DIFFICULTIES.map((d) => {
+      const b = stats.best[d.id];
+      return `<div class="best diff-${d.id}"><span>${d.icon} ${d.name}</span><b>${b ? b.score + ' / ' + b.of : '–'}</b></div>`;
+    }).join('');
     $('mastery-list').innerHTML = Q.TOPICS.map((t) => {
       const m = mastery(t.id);
       const s = stats.topics[t.id];
@@ -232,10 +289,13 @@
   $('set-goal').addEventListener('change', (e) => { stats.goal = +e.target.value; save(); renderHome(); });
   $('reset').addEventListener('click', () => {
     askConfirm('Reset all progress? Your XP, streaks and mastery will be erased. This cannot be undone.', 'Reset everything', () => {
+      const keep = stats.difficulty;
       stats = freshStats();
+      stats.difficulty = keep;
       save();
       renderHud();
       renderProgress();
+      lab.setMode(keep, 1);
       toast('Progress reset. Fresh start!');
     });
   });
@@ -244,55 +304,156 @@
   let quiz = null;
 
   function startQuiz(mode) {
-    quiz = { mode, index: 0, score: 0, streak: 0, xp: 0, log: [], prompts: new Set(), current: null, answered: false, done: false };
+    const d = diff();
+    quiz = {
+      mode, diff: d, index: 0, score: 0, streak: 0, xp: 0, log: [], prompts: new Set(),
+      current: null, answered: false, done: false, peeked: false,
+      lives: d.lives || null, timerId: null, deadline: 0,
+    };
     showView('quiz');
     nextQuestion();
   }
 
+  function renderLives() {
+    const el = $('quiz-lives');
+    if (!quiz.diff.lives) { el.hidden = true; return; }
+    el.hidden = false;
+    el.textContent = '❤️'.repeat(quiz.lives) + '🖤'.repeat(quiz.diff.lives - quiz.lives);
+  }
+
   function nextQuestion() {
     if (quiz.index >= ROUND_LENGTH) return finishQuiz();
+    const d = quiz.diff;
     let q;
     for (let tries = 0; tries < 8; tries++) {
       const topic = quiz.mode === 'smart' ? Q.pickWeightedTopic(accuracyMap()) : quiz.mode;
-      q = Q.generate(topic);
+      q = Q.generate(topic, d.id);
       if (!quiz.prompts.has(q.prompt)) break;
     }
     quiz.prompts.add(q.prompt);
     quiz.current = q;
     quiz.answered = false;
+    quiz.peeked = false;
 
     const t = topicById[q.topic];
-    $('q-topic').textContent = `${t.icon} ${t.name}` + (q.kind === 'concept' ? ' · concept' : ' · calculation');
+    $('q-topic').textContent = `${d.icon} ${d.name} · ${t.icon} ${t.name} · ${q.kind === 'concept' ? 'concept' : 'calculation'}`;
     $('q-prompt').textContent = q.prompt;
     $('quiz-count').textContent = `${quiz.index + 1} / ${ROUND_LENGTH}`;
     $('quiz-fill').style.width = (100 * quiz.index) / ROUND_LENGTH + '%';
     $('quiz-streak').textContent = '🔥 ' + quiz.streak;
     $('q-feedback').hidden = true;
     $('q-next').hidden = true;
+    renderLives();
 
+    // formula help
+    const hasFormula = q.kind !== 'concept' && q.formula;
+    $('q-formula').hidden = !(hasFormula && d.formula === 'always');
+    $('q-formula').textContent = hasFormula ? '💡 Use: ' + q.formula : '';
+    $('q-peek').hidden = !(hasFormula && d.formula === 'peek');
+
+    // answer area
     const box = $('q-choices');
     box.innerHTML = '';
-    q.choices.forEach((c, i) => {
-      const b = document.createElement('button');
-      b.className = 'choice';
-      b.innerHTML = `<span class="key">${i + 1}</span><span></span>`;
-      b.lastChild.textContent = c;
-      b.addEventListener('click', () => answer(i));
-      box.appendChild(b);
-    });
+    const isTyped = q.kind === 'typed';
+    box.hidden = isTyped;
+    $('q-typed').hidden = !isTyped;
+    if (isTyped) {
+      $('q-input').value = '';
+      $('q-input').disabled = false;
+      $('q-check').disabled = false;
+      $('q-typed').className = 'typed';
+      $('q-unit').textContent = q.unit;
+      $('q-input').focus();
+    } else {
+      q.choices.forEach((c, i) => {
+        const b = document.createElement('button');
+        b.className = 'choice';
+        b.innerHTML = `<span class="key">${i + 1}</span><span></span>`;
+        b.lastChild.textContent = c;
+        b.addEventListener('click', () => answer(i));
+        box.appendChild(b);
+      });
+    }
+    $('quiz-tip').textContent = isTyped
+      ? 'Type the number and press Enter. The unit is already filled in.'
+      : 'Tip: press 1–4 to answer, Enter for the next question.' + (d.g === 10 ? ' Beginner uses g = 10 m/s².' : '');
+
+    startTimer();
   }
 
-  function answer(i) {
-    if (!quiz || quiz.answered) return;
-    const q = quiz.current;
-    const ok = i === q.correctIndex;
-    quiz.answered = true;
+  // ---------- timer ----------
+  function startTimer() {
+    stopTimer();
+    const secs = quiz.diff.timer;
+    $('quiz-timer').hidden = !secs;
+    if (!secs) return;
+    quiz.deadline = performance.now() + secs * 1000;
+    quiz.timerId = setInterval(tick, 100);
+    tick();
+  }
+  function stopTimer() {
+    if (quiz && quiz.timerId) { clearInterval(quiz.timerId); quiz.timerId = null; }
+  }
+  function timeLeftFraction() {
+    if (!quiz.diff.timer) return 0;
+    return Math.max(0, quiz.deadline - performance.now()) / (quiz.diff.timer * 1000);
+  }
+  function tick() {
+    if (!quiz || quiz.answered) return stopTimer();
+    const frac = timeLeftFraction();
+    const secs = Math.ceil(frac * quiz.diff.timer);
+    $('quiz-timer-fill').style.width = frac * 100 + '%';
+    $('quiz-timer-text').textContent = '⏱ ' + secs + ' s';
+    $('quiz-timer').classList.toggle('low', secs <= 10);
+    if (frac <= 0) resolve(false, '⏱ Out of time', { timeout: true });
+  }
 
-    const buttons = $('q-choices').children;
-    for (let k = 0; k < buttons.length; k++) {
-      buttons[k].disabled = true;
-      if (k === q.correctIndex) buttons[k].classList.add('correct');
-      else if (k === i) buttons[k].classList.add('wrong');
+  // ---------- answering ----------
+  function answer(i) {
+    if (!quiz || quiz.answered || quiz.current.kind === 'typed') return;
+    const q = quiz.current;
+    resolve(i === q.correctIndex, q.choices[i], { choiceIndex: i });
+  }
+
+  $('q-typed').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!quiz || quiz.answered) return;
+    const text = $('q-input').value.trim();
+    if (!text) { $('q-input').focus(); return; }
+    if (!isFinite(Q.parseAnswer(text))) {
+      toast('Type a number, like 12.5 or 4.5e19');
+      $('q-input').focus();
+      return;
+    }
+    const q = quiz.current;
+    resolve(Q.checkTyped(q, text), text + (q.unit ? ' ' + q.unit : ''), {});
+  });
+
+  $('q-peek').addEventListener('click', () => {
+    if (!quiz || quiz.answered) return;
+    quiz.peeked = true;
+    $('q-peek').hidden = true;
+    $('q-formula').hidden = false;
+  });
+
+  function resolve(ok, chosenText, opts) {
+    const q = quiz.current;
+    const d = quiz.diff;
+    const frac = timeLeftFraction();
+    quiz.answered = true;
+    stopTimer();
+
+    if (q.kind === 'typed') {
+      $('q-input').disabled = true;
+      $('q-check').disabled = true;
+      $('q-typed').className = 'typed ' + (ok ? 'correct' : 'wrong');
+    } else {
+      const buttons = $('q-choices').children;
+      for (let k = 0; k < buttons.length; k++) {
+        buttons[k].disabled = true;
+        if (k === q.correctIndex) buttons[k].classList.add('correct');
+        else if (k === opts.choiceIndex) buttons[k].classList.add('wrong');
+      }
     }
 
     // record stats
@@ -304,58 +465,103 @@
     ts.recent.push(ok);
     if (ts.recent.length > 20) ts.recent.shift();
 
-    let gained = 0;
+    let gained = 0, speedBonus = 0;
     if (ok) {
       quiz.score++;
       quiz.streak++;
       stats.correct++;
       ts.correct++;
       stats.bestStreak = Math.max(stats.bestStreak, quiz.streak);
-      gained = 10 + Math.min(quiz.streak - 1, 5) * 2;
+      speedBonus = d.timer ? Math.round(5 * frac) : 0;
+      const base = 10 + Math.min(quiz.streak - 1, 5) * 2 + speedBonus;
+      gained = Math.round(base * d.xpMult * (quiz.peeked ? 0.5 : 1));
       quiz.xp += gained;
       addXp(gained);
     } else {
       quiz.streak = 0;
+      if (d.lives) quiz.lives--;
     }
     if (todayCount() === stats.goal) toast('🏆 Daily goal reached! Great work.');
     save();
     renderHud();
+    renderLives();
 
-    quiz.log.push({ q, chosen: i, ok });
+    quiz.log.push({ q, chosenText, ok });
     const fb = $('q-feedback');
     fb.hidden = false;
     fb.className = 'feedback ' + (ok ? 'good' : 'bad');
-    fb.innerHTML = (ok
-      ? `<b>✅ Correct!</b> +${gained} XP${quiz.streak >= 3 ? ` · 🔥 ${quiz.streak} in a row!` : ''}`
-      : `<b>❌ Not quite.</b> The answer is <b></b>.`) + `<p></p>`;
-    if (!ok) fb.querySelector('b + b').textContent = q.choices[q.correctIndex];
-    fb.querySelector('p').textContent = q.explanation;
+    fb.innerHTML = '';
+    const head = document.createElement('div');
+    if (ok) {
+      head.innerHTML = `<b>✅ Correct!</b> +${gained} XP` +
+        (speedBonus ? ` <span class="small">(⚡ speed bonus)</span>` : '') +
+        (quiz.peeked ? ` <span class="small">(half XP for peeking)</span>` : '') +
+        (quiz.streak >= 3 ? ` · 🔥 ${quiz.streak} in a row!` : '');
+    } else {
+      head.innerHTML = `<b>${opts.timeout ? "⏱ Time's up!" : '❌ Not quite.'}</b> The answer is <b class="ans"></b>.`;
+      head.querySelector('.ans').textContent = q.answerText;
+      if (q.kind === 'typed' && !opts.timeout) {
+        const yours = document.createElement('div');
+        yours.className = 'small';
+        yours.textContent = `You typed ${chosenText}.`;
+        head.appendChild(yours);
+      }
+    }
+    fb.appendChild(head);
+    const p = document.createElement('p');
+    p.textContent = q.explanation;
+    fb.appendChild(p);
+    if (quiz.lives === 0) {
+      const over = document.createElement('p');
+      over.innerHTML = '<b>💀 Out of lives!</b>';
+      fb.appendChild(over);
+    }
 
     $('quiz-streak').textContent = '🔥 ' + quiz.streak;
     $('q-next').hidden = false;
-    $('q-next').textContent = quiz.index + 1 >= ROUND_LENGTH ? 'See results ➜' : 'Next ➜';
+    $('q-next').textContent = quiz.index + 1 >= ROUND_LENGTH || quiz.lives === 0 ? 'See results ➜' : 'Next ➜';
     $('q-next').focus();
   }
 
-  $('q-next').addEventListener('click', () => { quiz.index++; nextQuestion(); });
+  $('q-next').addEventListener('click', () => {
+    if (quiz.lives === 0) return finishQuiz();
+    quiz.index++;
+    nextQuestion();
+  });
   $('quiz-quit').addEventListener('click', () => {
+    stopTimer();
     if (quiz.index > 0 || quiz.answered) finishQuiz();
     else { quiz = null; showView('topics'); }
   });
 
   function finishQuiz() {
+    stopTimer();
     quiz.done = true;
+    const d = quiz.diff;
     const answered = quiz.log.length;
     const pct = answered ? quiz.score / answered : 0;
-    if (answered === ROUND_LENGTH && quiz.score === ROUND_LENGTH) {
-      addXp(25);
-      quiz.xp += 25;
-      toast('💯 Perfect round! +25 bonus XP');
-      save();
-      renderHud();
+    const gameOver = quiz.lives === 0;
+    const perfect = answered === ROUND_LENGTH && quiz.score === ROUND_LENGTH;
+    if (perfect) {
+      const bonus = Math.round(25 * d.xpMult);
+      addXp(bonus);
+      quiz.xp += bonus;
+      toast(`💯 Perfect round! +${bonus} bonus XP`);
     }
-    $('sum-emoji').textContent = pct === 1 ? '🏆' : pct >= 0.7 ? '🎉' : pct >= 0.4 ? '💪' : '📖';
-    $('sum-title').textContent = pct === 1 ? 'Perfect round!' : pct >= 0.7 ? 'Great job!' : pct >= 0.4 ? 'Good effort — keep going!' : 'Every mistake is a lesson!';
+    if (answered) {
+      const prev = stats.best[d.id];
+      if (!prev || quiz.score > prev.score) {
+        stats.best[d.id] = { score: quiz.score, of: ROUND_LENGTH };
+        if (prev && !perfect) toast(`🏅 New best on ${d.name}: ${quiz.score} / ${ROUND_LENGTH}`);
+      }
+    }
+    save();
+    renderHud();
+
+    $('sum-emoji').textContent = gameOver ? '💀' : pct === 1 ? '🏆' : pct >= 0.7 ? '🎉' : pct >= 0.4 ? '💪' : '📖';
+    $('sum-title').textContent = gameOver ? 'Out of lives!'
+      : pct === 1 ? 'Perfect round!' : pct >= 0.7 ? 'Great job!' : pct >= 0.4 ? 'Good effort. Keep going!' : 'Every mistake is a lesson!';
+    $('sum-diff').textContent = `${d.icon} ${d.name}` + (gameOver ? ` · survived ${answered} question${answered === 1 ? '' : 's'}` : '');
     $('sum-score').textContent = quiz.score;
     $('sum-total').textContent = answered;
     $('sum-xp').textContent = quiz.xp;
@@ -373,8 +579,8 @@
         card.innerHTML = '<p class="q-prompt"></p><p class="small"><span class="tag bad">You said</span> <span></span></p><p class="small"><span class="tag good">Answer</span> <span></span></p><p class="muted small"></p>';
         const ps = card.querySelectorAll('p');
         ps[0].textContent = l.q.prompt;
-        ps[1].lastChild.textContent = l.q.choices[l.chosen];
-        ps[2].lastChild.textContent = l.q.choices[l.q.correctIndex];
+        ps[1].lastChild.textContent = l.chosenText;
+        ps[2].lastChild.textContent = l.q.answerText;
         ps[3].textContent = l.q.explanation;
         review.appendChild(card);
       });
@@ -388,8 +594,11 @@
   document.addEventListener('keydown', (e) => {
     if (!$('confirm').hidden) { if (e.key === 'Escape') closeConfirm(false); return; }
     if (!quiz || quiz.done || !$('view-quiz').classList.contains('active')) return;
-    if (!quiz.answered && /^[1-4]$/.test(e.key)) answer(+e.key - 1);
-    else if (quiz.answered && e.key === 'Enter' && document.activeElement !== $('q-next')) $('q-next').click();
+    if (!quiz.answered && quiz.current.kind !== 'typed' && /^[1-4]$/.test(e.key)) answer(+e.key - 1);
+    else if (quiz.answered && e.key === 'Enter' && document.activeElement !== $('q-next')) {
+      e.preventDefault();
+      $('q-next').click();
+    }
   });
 
   // ---------- home buttons ----------
@@ -409,21 +618,25 @@
   // ---------- projectile lab ----------
   const lab = window.ProjectileLab.create({
     canvas: $('lab-canvas'),
-    startLevel: stats.lab.level,
+    mode: stats.difficulty,
+    startLevel: stats.lab.levels[stats.difficulty] || 1,
     elements: {
       angle: $('lab-angle'), speed: $('lab-speed'),
       angleOut: $('lab-angle-out'), speedOut: $('lab-speed-out'),
       fire: $('lab-fire'), hint: $('lab-hint'), next: $('lab-next'),
       message: $('lab-message'), level: $('lab-level'), shots: $('lab-shots'),
+      nudges: document.querySelectorAll('.nudge'),
     },
     onScore(r) {
       stats.lab.shots++;
       if (r.hit) {
+        const gained = Math.round(r.xp * Q.DIFF[r.mode].xpMult);
         touchDay();
         stats.lab.hits++;
-        stats.lab.level = r.level + 1;
-        addXp(r.xp);
-        if (r.level + 1 === 3) toast('🧱 Walls unlocked! Now you need to clear an obstacle.');
+        stats.lab.levels[r.mode] = r.level + 1;
+        addXp(gained);
+        r.done(gained);
+        if (r.mode === 'medium' && r.level + 1 === 3) toast('🧱 Walls unlocked! Now you need to clear an obstacle.');
       }
       save();
       renderHud();
@@ -432,6 +645,7 @@
 
   // ---------- boot ----------
   renderFormulas();
+  renderDiffPickers();
   renderHud();
   showView('home');
 })();

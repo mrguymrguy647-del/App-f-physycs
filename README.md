@@ -11,6 +11,17 @@ No install needed. Either:
 
 It works on phones too. Your progress is saved in your browser (`localStorage`).
 
+## Difficulty levels
+
+Pick one on the Home, Quiz or Lab screen. You can switch any time.
+
+| Level | Quiz | Projectile Lab | XP |
+| --- | --- | --- | --- |
+| 🌱 **Beginner** | One-step problems, friendly numbers, g = 10. The formula is shown on every question | Wide targets and a dotted line showing where your shot will land | ×1 |
+| 🔥 **Medium** | Two-step problems and classic traps, g = 9.8. "Show formula" costs half the XP | Targets shrink as you level up, walls from level 3 | ×1.5 |
+| ⚡ **Hard** | Multi-step problems (slopes with friction, lifts, Doppler, mixed circuits…) with a 45 s timer. Faster answers get bonus XP | Narrow targets and walls from the start, no hints | ×2 |
+| 💀 **Hardcore** | No answer options: type the number yourself (within 2%). 60 s per question, 3 lives | Tiny targets, walls and wind that pushes the ball sideways | ×3 |
+
 ## What's inside
 
 | Mode | What you do |
@@ -38,7 +49,7 @@ tests/              checks that every generated question is valid
 
 ## Adding questions
 
-- **New calculation:** add a function to the right topic in `GENERATORS` in `js/questions.js`. It returns `{ prompt, answer, unit, mistakes: [...], explanation }`.
+- **New calculation:** add `gen(tier, formula, function name(o) { ... })` to the right topic in `GENERATORS` in `js/questions.js`. Tier 1 = one step (Beginner and Medium), 2 = two steps (Medium, Hard and Hardcore), 3 = multi-step (Hard and Hardcore). The function gets `o.g` (10 or 9.8) and returns `{ prompt, answer, unit, mistakes: [...], explanation }`.
 - **New concept question:** add `{ prompt, choices, explanation }` to `CONCEPTS`. **The first choice is the correct one** (choices are shuffled when shown).
 
 Run `npm test` afterwards to check that everything still generates correctly.
