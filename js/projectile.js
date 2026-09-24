@@ -25,6 +25,8 @@
   };
 
   function rand(min, max) { return min + Math.random() * (max - min); }
+  const t = (key, vars) => root.I18N.t(key, vars);
+  const ltr = (s) => `<bdi dir="ltr">${s}</bdi>`;
   const toRad = (d) => (d * Math.PI) / 180;
 
   function create(opts) {
@@ -119,15 +121,19 @@
       el.next.hidden = true;
       el.fire.disabled = false;
       el.hint.hidden = !state.mode.hints;
-      setMessage(
-        `Target at <b>${(state.target.x - LAUNCH_X).toFixed(1)} m</b> (width ${state.target.w.toFixed(1)} m)` +
-          (state.wall ? `. Wall ${state.wall.h.toFixed(1)} m tall at ${(state.wall.x - LAUNCH_X).toFixed(1)} m` : '') +
-          (state.wind ? `. 💨 Wind accelerates the ball <b>${Math.abs(state.wind).toFixed(1)} m/s² ${state.wind > 0 ? 'forward →' : '← backward'}</b>` : '') +
-          '. Pick an angle and speed, then fire!' +
-          (state.mode.preview ? ' The dotted line shows where your shot will go.' : '')
-      );
+      introMessage();
       updateHud();
       draw();
+    }
+
+    function introMessage() {
+      setMessage(
+        t('lab.target', { d: ltr((state.target.x - LAUNCH_X).toFixed(1) + ' m'), w: ltr(state.target.w.toFixed(1) + ' m') }) +
+          (state.wall ? t('lab.wall', { h: ltr(state.wall.h.toFixed(1) + ' m'), x: ltr((state.wall.x - LAUNCH_X).toFixed(1) + ' m') }) : '') +
+          (state.wind ? t(state.wind > 0 ? 'lab.windFwd' : 'lab.windBack', { a: ltr(Math.abs(state.wind).toFixed(1) + ' m/s²') }) : '') +
+          t('lab.pick') +
+          (state.mode.preview ? t('lab.preview') : '')
+      );
     }
 
     function fire() {
@@ -161,17 +167,17 @@
       if (state.trails.length > 6) state.trails.shift();
       const s = f.sim;
       let info =
-        `<span class="lab-formula">R = v²·sin(2θ)/g = ${f.v}²·sin(${2 * f.angle}°)/9.8 = <b>${s.range.toFixed(1)} m</b>`;
+        `<span class="lab-formula">${ltr(`R = v²·sin(2θ)/g = ${f.v}²·sin(${2 * f.angle}°)/9.8 = <b>${s.range.toFixed(1)} m</b>`)}`;
       if (s.ax) {
-        info += ` · wind shift ½·a·t² = ½ × ${s.ax.toFixed(1)} × ${s.flightT.toFixed(2)}² = <b>${s.windShift.toFixed(1)} m</b>`;
+        info += `<br>${t('lab.windShift')}: ${ltr(`½·a·t² = ½ × ${s.ax.toFixed(1)} × ${s.flightT.toFixed(2)}² = <b>${s.windShift.toFixed(1)} m</b>`)}`;
       }
-      info += ` · max height = (v·sinθ)²/2g = ${s.maxH.toFixed(1)} m · flight time = 2v·sinθ/g = ${s.flightT.toFixed(2)} s</span>`;
+      info += `<br>${t('lab.maxH')}: ${ltr(`(v·sinθ)²/2g = ${s.maxH.toFixed(1)} m`)}<br>${t('lab.flight')}: ${ltr(`2v·sinθ/g = ${s.flightT.toFixed(2)} s`)}</span>`;
 
       if (s.hit) {
         const xp = state.shotsThisTarget === 1 ? 30 : state.shotsThisTarget === 2 ? 20 : 10;
         state.solved = true;
         onScore({ hit: true, xp, level: state.level, shots: state.shotsThisTarget, mode: state.modeId, done: (gained) => {
-          setMessage(`🎯 <b>Direct hit</b> in ${state.shotsThisTarget} shot${state.shotsThisTarget > 1 ? 's' : ''}! +${gained} XP<br>${info}`, 'good');
+          setMessage(`${t('lab.hit', { n: state.shotsThisTarget, xp: gained })}<br>${info}`, 'good');
         } });
         state.level++;
         el.next.hidden = false;
@@ -179,11 +185,10 @@
       } else {
         onScore({ hit: false, xp: 0, level: state.level, mode: state.modeId });
         const off = s.landX - state.target.x;
+        const landed = (s.landX - LAUNCH_X).toFixed(1);
         const miss = s.result === 'wall'
-          ? '🧱 Blocked by the wall. Try a steeper angle.'
-          : off < 0
-            ? `⬅️ Landed at ${(s.landX - LAUNCH_X).toFixed(1)} m: too short by ${(-off).toFixed(1)} m.`
-            : `➡️ Landed at ${(s.landX - LAUNCH_X).toFixed(1)} m: too long by ${off.toFixed(1)} m.`;
+          ? t('lab.blocked')
+          : t(off < 0 ? 'lab.short' : 'lab.long', { x: ltr(landed + ' m'), d: ltr(Math.abs(off).toFixed(1) + ' m') });
         setMessage(`${miss}<br>${info}`, 'bad');
         el.fire.disabled = false;
       }
@@ -197,10 +202,10 @@
       const v = Math.sqrt((d * G) / Math.sin(toRad(2 * angle)));
       const ok = v >= MIN_V && v <= MAX_V;
       setMessage(
-        `💡 Solve R = v²·sin(2θ)/g for v: v = √(R·g / sin 2θ) = √(${d.toFixed(1)} × 9.8 / sin ${2 * angle}°) ≈ <b>${v.toFixed(1)} m/s</b>` +
-          (ok ? '' : ` That's outside the ${MIN_V}–${MAX_V} m/s range, so try another angle.`) +
-          (state.wall ? ' Remember the wall: the ball must be above it when passing!' : '') +
-          ' (Hints are free, but try to calculate it yourself first!)'
+        t('lab.hintText', { f: ltr(`v = √(R·g / sin 2θ) = √(${d.toFixed(1)} × 9.8 / sin ${2 * angle}°)`), v: ltr(v.toFixed(1) + ' m/s') }) +
+          (ok ? '' : t('lab.hintOut', { min: MIN_V, max: ltr(MAX_V + ' m/s') })) +
+          (state.wall ? t('lab.hintWall') : '') +
+          t('lab.hintFree')
       );
     }
 
@@ -259,7 +264,7 @@
         ctx.textAlign = 'right';
         ctx.fillStyle = c.ball;
         const arrow = state.wind > 0 ? '→→→' : '←←←';
-        ctx.fillText(`wind ${Math.abs(state.wind).toFixed(1)} m/s²  ${arrow}`, VIEW_W - 12, 14 + 14 * ts);
+        ctx.fillText(`${t('lab.wind')} ${Math.abs(state.wind).toFixed(1)} m/s²  ${arrow}`, VIEW_W - 12, 14 + 14 * ts);
         ctx.textAlign = 'left';
         ctx.font = font(11);
       }
@@ -386,6 +391,10 @@
         state.mode = MODES[modeId] || MODES.medium;
         state.level = level || 1;
         newTarget();
+      },
+      retext() {
+        if (!state.flying && !state.solved && !state.shotsThisTarget) introMessage();
+        draw();
       },
       get level() { return state.level; },
       _simulate: simulate,

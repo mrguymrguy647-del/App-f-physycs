@@ -1,64 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Physics Quest — a game for practising physics in your free time." />
+  <meta name="description" content="Physics Quest: a game for learning and practising physics, in English and Arabic." />
   <title>Physics Quest</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">⚛️ <span>Physics Quest</span></div>
+    <div class="brand">⚛️ <span data-i18n="app.name">Physics Quest</span></div>
     <div class="player" aria-live="polite">
-      <span class="pill" title="Days in a row you've practised">🔥 <b id="hud-days">0</b></span>
-      <span class="pill" title="Your level">Lv <b id="hud-level">1</b></span>
-      <div class="xpbar" title="XP to next level"><div id="hud-xpfill"></div></div>
+      <button class="lang-btn" id="lang-toggle" data-i18n="lang.other" data-i18n-title="lang.switchTitle">العربية</button>
+      <span class="pill" data-i18n-title="hud.days">🔥 <b id="hud-days">0</b></span>
+      <span class="pill" data-i18n-title="hud.level"><span data-i18n="hud.lv">Lv</span> <b id="hud-level">1</b></span>
+      <div class="xpbar"><div id="hud-xpfill"></div></div>
     </div>
   </header>
 
   <nav class="tabs" role="tablist">
-    <button class="tab active" data-view="home" role="tab">🏠 <span>Home</span></button>
-    <button class="tab" data-view="topics" role="tab">📚 <span>Quiz</span></button>
-    <button class="tab" data-view="lab" role="tab">🎯 <span>Lab</span></button>
-    <button class="tab" data-view="formulas" role="tab">📐 <span>Formulas</span></button>
-    <button class="tab" data-view="progress" role="tab">📈 <span>Progress</span></button>
+    <button class="tab active" data-view="home" role="tab">🏠 <span data-i18n="tab.home">Home</span></button>
+    <button class="tab" data-view="school" role="tab">🎓 <span data-i18n="tab.school">School</span></button>
+    <button class="tab" data-view="topics" role="tab">📚 <span data-i18n="tab.quiz">Quiz</span></button>
+    <button class="tab" data-view="lab" role="tab">🎯 <span data-i18n="tab.lab">Lab</span></button>
+    <button class="tab" data-view="formulas" role="tab">📐 <span data-i18n="tab.formulas">Formulas</span></button>
+    <button class="tab" data-view="progress" role="tab">📈 <span data-i18n="tab.progress">Progress</span></button>
   </nav>
 
   <main>
     <!-- HOME -->
     <section id="view-home" class="view active">
       <div class="hero card">
-        <h1 id="greeting">Ready to level up your physics?</h1>
-        <p class="muted">Short, fun practice sessions for your free time. Every question comes with a worked explanation, so every mistake is a lesson.</p>
+        <h1 id="greeting"></h1>
+        <p class="muted" data-i18n="home.intro"></p>
         <div class="goal">
-          <div class="goal-label"><span>Today's goal</span><span><b id="goal-count">0</b> / <span id="goal-target">20</span> questions</span></div>
+          <div class="goal-label"><span data-i18n="home.goal"></span><span id="goal-count"></span></div>
           <div class="bar"><div id="goal-fill"></div></div>
         </div>
+        <button class="school-cta" id="btn-school">
+          <span class="school-cta-icon">🎓</span>
+          <span><b id="school-cta-title"></b><small id="school-cta-sub"></small></span>
+        </button>
         <div class="diff-block">
-          <div class="diff-title">Difficulty</div>
+          <div class="diff-title" data-i18n="diff.title"></div>
           <div class="diff-slot" data-slot="home"></div>
         </div>
         <div class="hero-actions">
-          <button class="btn primary big" id="btn-smart">🧠 Smart Mix <small>focuses on your weak spots</small></button>
-          <button class="btn big" id="btn-lab">🎯 Projectile Lab <small>aim a cannon with kinematics</small></button>
+          <button class="btn primary big" id="btn-smart"><span data-i18n="btn.smart"></span> <small data-i18n="btn.smartSub"></small></button>
+          <button class="btn big" id="btn-lab"><span data-i18n="btn.lab"></span> <small data-i18n="btn.labSub"></small></button>
         </div>
       </div>
       <div class="grid stats-mini">
-        <div class="card stat"><span class="stat-num" id="home-xp">0</span><span class="muted">total XP</span></div>
-        <div class="card stat"><span class="stat-num" id="home-acc">–</span><span class="muted">accuracy</span></div>
-        <div class="card stat"><span class="stat-num" id="home-best">0</span><span class="muted">best answer streak</span></div>
-        <div class="card stat"><span class="stat-num" id="home-weak">–</span><span class="muted">topic to work on</span></div>
+        <div class="card stat"><span class="stat-num" id="home-xp">0</span><span class="muted" data-i18n="stat.xp"></span></div>
+        <div class="card stat"><span class="stat-num" id="home-acc">–</span><span class="muted" data-i18n="stat.acc"></span></div>
+        <div class="card stat"><span class="stat-num" id="home-best">0</span><span class="muted" data-i18n="stat.bestStreak"></span></div>
+        <div class="card stat"><span class="stat-num" id="home-weak">–</span><span class="muted" data-i18n="stat.weak"></span></div>
+      </div>
+    </section>
+
+    <!-- SCHOOL -->
+    <section id="view-school" class="view">
+      <div class="card school-head">
+        <h2 data-i18n="school.title"></h2>
+        <p class="muted" data-i18n="school.intro"></p>
+        <div class="goal-label"><span id="school-progress-text"></span><span id="school-progress-pct"></span></div>
+        <div class="bar good"><div id="school-progress-fill"></div></div>
+        <button class="grad-banner" id="school-grad-banner" data-i18n="school.gradBanner" hidden></button>
+      </div>
+      <div id="school-units"></div>
+    </section>
+
+    <!-- LESSON -->
+    <section id="view-lesson" class="view">
+      <div class="lesson-head">
+        <button class="btn ghost small" id="lesson-exit" data-i18n="school.back"></button>
+        <div class="dots" id="lesson-dots" aria-hidden="true"></div>
+        <span class="muted small" id="lesson-count"></span>
+      </div>
+      <article class="card lesson-card" id="lesson-card">
+        <div class="lesson-kicker" id="lesson-kicker"></div>
+        <h2 id="lesson-title"></h2>
+        <div class="example-tag" id="lesson-example-tag" data-i18n="lesson.example" hidden></div>
+        <div class="lesson-body" id="lesson-body"></div>
+      </article>
+      <div class="lesson-nav">
+        <button class="btn" id="lesson-prev" data-i18n="lesson.back"></button>
+        <button class="btn primary" id="lesson-next" data-i18n="lesson.next"></button>
+        <button class="btn primary" id="lesson-practice" data-i18n="lesson.practice" hidden></button>
       </div>
     </section>
 
     <!-- TOPIC PICKER -->
     <section id="view-topics" class="view">
-      <h2>Choose a topic</h2>
-      <p class="muted">Each round is 10 questions. Questions are randomly generated, so you'll never run out.</p>
+      <h2 data-i18n="topics.title"></h2>
+      <p class="muted" data-i18n="topics.sub"></p>
       <div class="card diff-block">
-        <div class="diff-title">Difficulty</div>
+        <div class="diff-title" data-i18n="diff.title"></div>
         <div class="diff-slot" data-slot="topics"></div>
       </div>
       <div class="grid topics" id="topic-grid"></div>
@@ -67,10 +108,10 @@
     <!-- QUIZ -->
     <section id="view-quiz" class="view">
       <div class="quiz-head">
-        <button class="btn ghost small" id="quiz-quit">✕ Quit</button>
+        <button class="btn ghost small" id="quiz-quit" data-i18n="quiz.quit"></button>
         <div class="quiz-progress"><div class="bar"><div id="quiz-fill"></div></div><span id="quiz-count">1 / 10</span></div>
-        <span class="pill" id="quiz-lives" title="Lives left" hidden></span>
-        <span class="pill" id="quiz-streak" title="Answer streak">🔥 0</span>
+        <span class="pill" id="quiz-lives" data-i18n-title="quiz.livesTitle" hidden></span>
+        <span class="pill" id="quiz-streak" data-i18n-title="quiz.streakTitle">🔥 0</span>
       </div>
       <div class="timer" id="quiz-timer" hidden>
         <div class="timer-fill" id="quiz-timer-fill"></div>
@@ -80,109 +121,154 @@
         <div class="q-topic" id="q-topic"></div>
         <p class="q-prompt" id="q-prompt"></p>
         <div class="q-formula" id="q-formula" hidden></div>
-        <button class="btn ghost small peek" id="q-peek" hidden>💡 Show formula (half XP)</button>
+        <button class="btn ghost small peek" id="q-peek" data-i18n="quiz.peek" hidden></button>
         <div class="choices" id="q-choices"></div>
         <form class="typed" id="q-typed" hidden autocomplete="off">
           <label class="typed-field">
-            <span class="sr-only">Your answer</span>
-            <input id="q-input" type="text" inputmode="decimal" placeholder="Type your answer" enterkeyhint="done" />
+            <span class="sr-only" data-i18n="quiz.yourAnswer"></span>
+            <input id="q-input" type="text" inputmode="decimal" data-i18n-placeholder="quiz.placeholder" enterkeyhint="done" />
             <span class="typed-unit" id="q-unit"></span>
           </label>
-          <button class="btn primary" type="submit" id="q-check">Check</button>
-          <p class="muted small typed-help">Round to 3 significant figures. Within 2% counts. Big numbers: 4.5e19 or 4.5x10^19.</p>
+          <button class="btn primary" type="submit" id="q-check" data-i18n="quiz.check"></button>
+          <p class="muted small typed-help" data-i18n="quiz.typedHelp"></p>
         </form>
         <div class="feedback" id="q-feedback" hidden></div>
-        <button class="btn primary" id="q-next" hidden>Next ➜</button>
+        <button class="btn primary" id="q-next" hidden></button>
       </div>
-      <p class="muted small center" id="quiz-tip">Tip: press 1–4 to answer, Enter for the next question.</p>
+      <p class="muted small center" id="quiz-tip"></p>
     </section>
 
     <!-- SUMMARY -->
     <section id="view-summary" class="view">
       <div class="card center">
         <div class="big-emoji" id="sum-emoji">🎉</div>
-        <h2 id="sum-title">Round complete!</h2>
-        <p class="muted" id="sum-diff"></p>
-        <p class="sum-score"><b id="sum-score">0</b> / <span id="sum-total">10</span> correct · <b>+<span id="sum-xp">0</span> XP</b></p>
-        <div class="hero-actions">
-          <button class="btn primary" id="sum-again">Play again</button>
-          <button class="btn" id="sum-topics">Other topics</button>
-        </div>
+        <h2 id="sum-title"></h2>
+        <p class="muted" id="sum-sub"></p>
+        <p class="sum-score" id="sum-score"></p>
+        <p class="sum-extra" id="sum-extra" hidden></p>
+        <div class="hero-actions" id="sum-actions"></div>
       </div>
       <div id="sum-review"></div>
+    </section>
+
+    <!-- GRADUATION -->
+    <section id="view-graduation" class="view">
+      <div class="card center grad-hero">
+        <div class="big-emoji">🎓</div>
+        <h2 data-i18n="grad.title"></h2>
+        <p class="muted" data-i18n="grad.sub"></p>
+        <form class="grad-name" id="grad-form" autocomplete="off">
+          <label for="grad-name-input" data-i18n="grad.nameLabel"></label>
+          <div class="grad-name-row">
+            <input id="grad-name-input" type="text" maxlength="40" data-i18n-placeholder="grad.namePlaceholder" />
+            <button class="btn primary" type="submit" data-i18n="grad.show"></button>
+          </div>
+        </form>
+      </div>
+      <div class="certificate" id="certificate" hidden>
+        <div class="cert-inner">
+          <div class="cert-seal" aria-hidden="true">⚛️</div>
+          <div class="cert-school" data-i18n="cert.school"></div>
+          <div class="cert-title" data-i18n="cert.title"></div>
+          <div class="cert-certifies" data-i18n="cert.certifies"></div>
+          <div class="cert-name" id="cert-name"></div>
+          <p class="cert-body" id="cert-body"></p>
+          <div class="cert-meta">
+            <div><span data-i18n="cert.grade"></span><b id="cert-grade"></b></div>
+            <div><span data-i18n="cert.date"></span><b id="cert-date"></b></div>
+          </div>
+          <div class="cert-sign">
+            <span class="cert-signature" data-i18n="cert.sign"></span>
+            <span class="muted small" data-i18n="cert.signRole"></span>
+          </div>
+        </div>
+      </div>
+      <div class="grad-actions" id="grad-actions" hidden>
+        <p class="muted small center" data-i18n="grad.keep"></p>
+        <div class="hero-actions">
+          <button class="btn" id="grad-edit" data-i18n="grad.editName"></button>
+          <button class="btn primary" id="grad-next" data-i18n="grad.next"></button>
+          <button class="btn" id="grad-school" data-i18n="ex.toSchool"></button>
+        </div>
+      </div>
     </section>
 
     <!-- LAB -->
     <section id="view-lab" class="view">
       <div class="lab-head">
-        <h2>🎯 Projectile Lab</h2>
-        <div><span class="pill">Level <b id="lab-level">1</b></span> <span class="pill">Shots <b id="lab-shots">0</b></span></div>
+        <h2 data-i18n="lab.title"></h2>
+        <div><span class="pill"><span data-i18n="lab.level"></span> <b id="lab-level">1</b></span> <span class="pill"><span data-i18n="lab.shots"></span> <b id="lab-shots">0</b></span></div>
       </div>
       <div class="diff-slot compact" data-slot="lab"></div>
-      <canvas id="lab-canvas" aria-label="Projectile simulation"></canvas>
+      <canvas id="lab-canvas" dir="ltr" aria-label="Projectile simulation"></canvas>
       <div class="lab-controls card">
         <div class="slider">
-          <label for="lab-angle">Angle θ <output id="lab-angle-out">45°</output></label>
+          <label for="lab-angle"><span data-i18n="lab.angle"></span> <output id="lab-angle-out" dir="ltr">45°</output></label>
           <div class="slider-row">
-            <button class="nudge" data-for="lab-angle" data-step="-1" aria-label="Decrease angle">−</button>
+            <button class="nudge" data-for="lab-angle" data-step="-1" data-i18n-aria="lab.dec">−</button>
             <input type="range" id="lab-angle" min="5" max="85" step="1" value="45" />
-            <button class="nudge" data-for="lab-angle" data-step="1" aria-label="Increase angle">+</button>
+            <button class="nudge" data-for="lab-angle" data-step="1" data-i18n-aria="lab.inc">+</button>
           </div>
         </div>
         <div class="slider">
-          <label for="lab-speed">Launch speed v <output id="lab-speed-out">20.0 m/s</output></label>
+          <label for="lab-speed"><span data-i18n="lab.speed"></span> <output id="lab-speed-out" dir="ltr">20.0 m/s</output></label>
           <div class="slider-row">
-            <button class="nudge" data-for="lab-speed" data-step="-0.1" aria-label="Decrease speed">−</button>
+            <button class="nudge" data-for="lab-speed" data-step="-0.1" data-i18n-aria="lab.dec">−</button>
             <input type="range" id="lab-speed" min="5" max="40" step="0.1" value="20" />
-            <button class="nudge" data-for="lab-speed" data-step="0.1" aria-label="Increase speed">+</button>
+            <button class="nudge" data-for="lab-speed" data-step="0.1" data-i18n-aria="lab.inc">+</button>
           </div>
         </div>
         <div class="lab-buttons">
-          <button class="btn primary" id="lab-fire">🚀 Fire</button>
-          <button class="btn" id="lab-hint">💡 Hint</button>
-          <button class="btn primary" id="lab-next" hidden>Next target ➜</button>
+          <button class="btn primary" id="lab-fire" data-i18n="lab.fire"></button>
+          <button class="btn" id="lab-hint" data-i18n="lab.hint"></button>
+          <button class="btn primary" id="lab-next" data-i18n="lab.next" hidden></button>
         </div>
       </div>
       <div class="lab-message" id="lab-message"></div>
       <details class="card explain">
-        <summary>How does projectile motion work?</summary>
-        <p>Split the launch velocity into horizontal and vertical parts: <code>vₓ = v·cos θ</code> and <code>v_y = v·sin θ</code>.</p>
-        <p>Horizontally nothing pushes the ball (no air resistance), so <code>x = vₓ·t</code>. Vertically gravity pulls it down: <code>y = v_y·t − ½·g·t²</code>.</p>
-        <p>It lands when <code>y = 0</code> again, at <code>t = 2·v·sin θ / g</code>. Put that into the x equation and you get the range: <code>R = v²·sin(2θ) / g</code>. The biggest range comes from 45°, and angles like 30° and 60° give the <i>same</i> range!</p>
+        <summary data-i18n="lab.explainTitle"></summary>
+        <p data-i18n-html="lab.explain1"></p>
+        <p data-i18n-html="lab.explain2"></p>
+        <p data-i18n-html="lab.explain3"></p>
       </details>
     </section>
 
     <!-- FORMULAS -->
     <section id="view-formulas" class="view">
-      <h2>Formula sheet</h2>
-      <p class="muted">Everything you need for the quizzes. g = 9.8 m/s² (Beginner rounds it to 10 m/s²).</p>
+      <h2 data-i18n="formulas.title"></h2>
+      <p class="muted" data-i18n="formulas.sub"></p>
       <div class="grid formulas" id="formula-grid"></div>
     </section>
 
     <!-- PROGRESS -->
     <section id="view-progress" class="view">
-      <h2>Your progress</h2>
+      <h2 data-i18n="progress.title"></h2>
       <div class="grid stats-mini">
-        <div class="card stat"><span class="stat-num" id="pr-level">1</span><span class="muted" id="pr-title">level</span></div>
-        <div class="card stat"><span class="stat-num" id="pr-answered">0</span><span class="muted">questions answered</span></div>
-        <div class="card stat"><span class="stat-num" id="pr-days">0</span><span class="muted">day streak (best <span id="pr-bestdays">0</span>)</span></div>
-        <div class="card stat"><span class="stat-num" id="pr-lab">0</span><span class="muted">lab targets hit</span></div>
+        <div class="card stat"><span class="stat-num" id="pr-level">1</span><span class="muted" id="pr-title"></span></div>
+        <div class="card stat"><span class="stat-num" id="pr-answered">0</span><span class="muted" data-i18n="progress.answered"></span></div>
+        <div class="card stat"><span class="stat-num" id="pr-days">0</span><span class="muted" id="pr-days-label"></span></div>
+        <div class="card stat"><span class="stat-num" id="pr-lab">0</span><span class="muted" data-i18n="progress.labHits"></span></div>
       </div>
       <div class="card">
-        <h3>Best round per difficulty</h3>
+        <h3 data-i18n="progress.best"></h3>
         <div class="best-grid" id="best-list"></div>
       </div>
       <div class="card">
-        <h3>Topic mastery <span class="muted small">(based on your last 20 answers per topic)</span></h3>
+        <h3><span data-i18n="progress.mastery"></span> <span class="muted small" data-i18n="progress.masterySub"></span></h3>
         <div id="mastery-list"></div>
       </div>
       <div class="card">
-        <h3>Settings</h3>
-        <label class="row">Daily goal
-          <select id="set-goal"><option>10</option><option selected>20</option><option>30</option><option>50</option></select>
-          questions
-        </label>
-        <button class="btn danger small" id="reset">Reset all progress</button>
+        <h3 data-i18n="settings.title"></h3>
+        <div class="settings">
+          <label class="row"><span data-i18n="settings.language"></span>
+            <select id="set-lang"><option value="en">English</option><option value="ar">العربية</option></select>
+          </label>
+          <label class="row"><span data-i18n="settings.goal"></span>
+            <select id="set-goal"><option>10</option><option selected>20</option><option>30</option><option>50</option></select>
+            <span data-i18n="settings.questions"></span>
+          </label>
+          <button class="btn danger small" id="reset" data-i18n="settings.reset"></button>
+        </div>
       </div>
     </section>
   </main>
@@ -193,13 +279,17 @@
     <div class="card modal-box" role="dialog" aria-modal="true" aria-labelledby="confirm-msg">
       <p id="confirm-msg"></p>
       <div class="modal-actions">
-        <button class="btn" id="confirm-no">Cancel</button>
-        <button class="btn primary" id="confirm-yes">Yes</button>
+        <button class="btn" id="confirm-no" data-i18n="confirm.cancel"></button>
+        <button class="btn primary" id="confirm-yes"></button>
       </div>
     </div>
   </div>
 
+  <canvas class="confetti" id="confetti" aria-hidden="true" hidden></canvas>
+
+  <script src="js/i18n.js"></script>
   <script src="js/questions.js"></script>
+  <script src="js/school.js"></script>
   <script src="js/projectile.js"></script>
   <script src="js/app.js"></script>
 </body>
