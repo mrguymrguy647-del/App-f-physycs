@@ -112,11 +112,30 @@
 
   document.querySelectorAll('.tab').forEach((b) =>
     b.addEventListener('click', () => {
-      if (quiz && !quiz.done && !confirm('Leave the current round? Your answers so far are saved.')) return;
-      quiz = null;
-      showView(b.dataset.view);
+      const leave = () => { quiz = null; showView(b.dataset.view); };
+      if (quiz && !quiz.done) askConfirm('Leave this round? The answers you already gave are saved.', 'Leave round', leave);
+      else leave();
     })
   );
+
+  // In-page confirmation (native confirm() dialogs are blocked in some hosts).
+  let confirmAction = null;
+  function askConfirm(message, yesLabel, onYes) {
+    $('confirm-msg').textContent = message;
+    $('confirm-yes').textContent = yesLabel;
+    confirmAction = onYes;
+    $('confirm').hidden = false;
+    $('confirm-no').focus();
+  }
+  function closeConfirm(run) {
+    const action = confirmAction;
+    confirmAction = null;
+    $('confirm').hidden = true;
+    if (run && action) action();
+  }
+  $('confirm-yes').addEventListener('click', () => closeConfirm(true));
+  $('confirm-no').addEventListener('click', () => closeConfirm(false));
+  $('confirm').addEventListener('click', (e) => { if (e.target === $('confirm')) closeConfirm(false); });
 
   function renderHud() {
     const li = levelInfo(stats.xp);
@@ -212,12 +231,13 @@
 
   $('set-goal').addEventListener('change', (e) => { stats.goal = +e.target.value; save(); renderHome(); });
   $('reset').addEventListener('click', () => {
-    if (!confirm('Really reset ALL progress? This cannot be undone.')) return;
-    stats = freshStats();
-    save();
-    renderHud();
-    renderProgress();
-    toast('Progress reset. Fresh start!');
+    askConfirm('Reset all progress? Your XP, streaks and mastery will be erased. This cannot be undone.', 'Reset everything', () => {
+      stats = freshStats();
+      save();
+      renderHud();
+      renderProgress();
+      toast('Progress reset. Fresh start!');
+    });
   });
 
   // ---------- quiz ----------
@@ -366,6 +386,7 @@
   $('sum-topics').addEventListener('click', () => { quiz = null; showView('topics'); });
 
   document.addEventListener('keydown', (e) => {
+    if (!$('confirm').hidden) { if (e.key === 'Escape') closeConfirm(false); return; }
     if (!quiz || quiz.done || !$('view-quiz').classList.contains('active')) return;
     if (!quiz.answered && /^[1-4]$/.test(e.key)) answer(+e.key - 1);
     else if (quiz.answered && e.key === 'Enter' && document.activeElement !== $('q-next')) $('q-next').click();
