@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Physics Quest — a game for practising physics in your free time." />
+  <title>Physics Quest</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚛️</text></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">⚛️ <span>Physics Quest</span></div>
+    <div class="player" aria-live="polite">
+      <span class="pill" title="Days in a row you've practised">🔥 <b id="hud-days">0</b></span>
+      <span class="pill" title="Your level">Lv <b id="hud-level">1</b></span>
+      <div class="xpbar" title="XP to next level"><div id="hud-xpfill"></div></div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-view="home" role="tab">🏠 <span>Home</span></button>
+    <button class="tab" data-view="topics" role="tab">📚 <span>Quiz</span></button>
+    <button class="tab" data-view="lab" role="tab">🎯 <span>Lab</span></button>
+    <button class="tab" data-view="formulas" role="tab">📐 <span>Formulas</span></button>
+    <button class="tab" data-view="progress" role="tab">📈 <span>Progress</span></button>
+  </nav>
+
+  <main>
+    <!-- HOME -->
+    <section id="view-home" class="view active">
+      <div class="hero card">
+        <h1 id="greeting">Ready to level up your physics?</h1>
+        <p class="muted">Short, fun practice sessions for your free time. Every question comes with a worked explanation, so every mistake is a lesson.</p>
+        <div class="goal">
+          <div class="goal-label"><span>Today's goal</span><span><b id="goal-count">0</b> / <span id="goal-target">20</span> questions</span></div>
+          <div class="bar"><div id="goal-fill"></div></div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn primary big" id="btn-smart">🧠 Smart Mix <small>focuses on your weak spots</small></button>
+          <button class="btn big" id="btn-lab">🎯 Projectile Lab <small>aim a cannon with kinematics</small></button>
+        </div>
+      </div>
+      <div class="grid stats-mini">
+        <div class="card stat"><span class="stat-num" id="home-xp">0</span><span class="muted">total XP</span></div>
+        <div class="card stat"><span class="stat-num" id="home-acc">–</span><span class="muted">accuracy</span></div>
+        <div class="card stat"><span class="stat-num" id="home-best">0</span><span class="muted">best answer streak</span></div>
+        <div class="card stat"><span class="stat-num" id="home-weak">–</span><span class="muted">topic to work on</span></div>
+      </div>
+    </section>
+
+    <!-- TOPIC PICKER -->
+    <section id="view-topics" class="view">
+      <h2>Choose a topic</h2>
+      <p class="muted">Each round is 10 questions. Questions are randomly generated, so you'll never run out.</p>
+      <div class="grid topics" id="topic-grid"></div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="view-quiz" class="view">
+      <div class="quiz-head">
+        <button class="btn ghost small" id="quiz-quit">✕ Quit</button>
+        <div class="quiz-progress"><div class="bar"><div id="quiz-fill"></div></div><span id="quiz-count">1 / 10</span></div>
+        <span class="pill" id="quiz-streak" title="Answer streak">🔥 0</span>
+      </div>
+      <div class="card question">
+        <div class="q-topic" id="q-topic"></div>
+        <p class="q-prompt" id="q-prompt"></p>
+        <div class="choices" id="q-choices"></div>
+        <div class="feedback" id="q-feedback" hidden></div>
+        <button class="btn primary" id="q-next" hidden>Next ➜</button>
+      </div>
+      <p class="muted small center">Tip: press 1–4 to answer, Enter for the next question. Use g = 9.8 m/s².</p>
+    </section>
+
+    <!-- SUMMARY -->
+    <section id="view-summary" class="view">
+      <div class="card center">
+        <div class="big-emoji" id="sum-emoji">🎉</div>
+        <h2 id="sum-title">Round complete!</h2>
+        <p class="sum-score"><b id="sum-score">0</b> / <span id="sum-total">10</span> correct · <b>+<span id="sum-xp">0</span> XP</b></p>
+        <div class="hero-actions">
+          <button class="btn primary" id="sum-again">Play again</button>
+          <button class="btn" id="sum-topics">Other topics</button>
+        </div>
+      </div>
+      <div id="sum-review"></div>
+    </section>
+
+    <!-- LAB -->
+    <section id="view-lab" class="view">
+      <div class="lab-head">
+        <h2>🎯 Projectile Lab</h2>
+        <div><span class="pill">Level <b id="lab-level">1</b></span> <span class="pill">Shots <b id="lab-shots">0</b></span></div>
+      </div>
+      <canvas id="lab-canvas" aria-label="Projectile simulation"></canvas>
+      <div class="lab-controls card">
+        <label>Angle θ <output id="lab-angle-out">45°</output>
+          <input type="range" id="lab-angle" min="5" max="85" step="1" value="45" />
+        </label>
+        <label>Launch speed v <output id="lab-speed-out">20 m/s</output>
+          <input type="range" id="lab-speed" min="5" max="40" step="0.5" value="20" />
+        </label>
+        <div class="lab-buttons">
+          <button class="btn primary" id="lab-fire">🚀 Fire</button>
+          <button class="btn" id="lab-hint">💡 Hint</button>
+          <button class="btn primary" id="lab-next" hidden>Next target ➜</button>
+        </div>
+      </div>
+      <div class="lab-message" id="lab-message"></div>
+      <details class="card explain">
+        <summary>How does projectile motion work?</summary>
+        <p>Split the launch velocity into horizontal and vertical parts: <code>vₓ = v·cos θ</code> and <code>v_y = v·sin θ</code>.</p>
+        <p>Horizontally nothing pushes the ball (no air resistance), so <code>x = vₓ·t</code>. Vertically gravity pulls it down: <code>y = v_y·t − ½·g·t²</code>.</p>
+        <p>It lands when <code>y = 0</code> again, at <code>t = 2·v·sin θ / g</code>. Put that into the x equation and you get the range: <code>R = v²·sin(2θ) / g</code>. The biggest range comes from 45°, and angles like 30° and 60° give the <i>same</i> range!</p>
+      </details>
+    </section>
+
+    <!-- FORMULAS -->
+    <section id="view-formulas" class="view">
+      <h2>Formula sheet</h2>
+      <p class="muted">Everything you need for the quizzes. g = 9.8 m/s².</p>
+      <div class="grid formulas" id="formula-grid"></div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section id="view-progress" class="view">
+      <h2>Your progress</h2>
+      <div class="grid stats-mini">
+        <div class="card stat"><span class="stat-num" id="pr-level">1</span><span class="muted" id="pr-title">level</span></div>
+        <div class="card stat"><span class="stat-num" id="pr-answered">0</span><span class="muted">questions answered</span></div>
+        <div class="card stat"><span class="stat-num" id="pr-days">0</span><span class="muted">day streak (best <span id="pr-bestdays">0</span>)</span></div>
+        <div class="card stat"><span class="stat-num" id="pr-lab">0</span><span class="muted">lab targets hit</span></div>
+      </div>
+      <div class="card">
+        <h3>Topic mastery <span class="muted small">(based on your last 20 answers per topic)</span></h3>
+        <div id="mastery-list"></div>
+      </div>
+      <div class="card">
+        <h3>Settings</h3>
+        <label class="row">Daily goal
+          <select id="set-goal"><option>10</option><option selected>20</option><option>30</option><option>50</option></select>
+          questions
+        </label>
+        <button class="btn danger small" id="reset">Reset all progress</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="js/questions.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
