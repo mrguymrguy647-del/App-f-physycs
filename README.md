@@ -28,7 +28,7 @@ Pick one on the Home, Quiz or Lab screen. You can switch any time.
 | --- | --- |
 | 🧠 **Smart Mix** | 10-question rounds across all topics that pick more questions from your weakest topics |
 | 📚 **Topic quizzes** | Motion, Forces, Energy, Momentum, Waves, Electricity. Calculation questions are generated randomly, so they never run out, and conceptual questions check your understanding |
-| 🎯 **Projectile Lab** | Set the angle and launch speed to hit a target. Every shot shows the range, max height and flight time using the real formulas. Walls appear from level 3 |
+| 🎯 **Projectile Lab** | Set the angle and launch speed to hit a target. Every shot shows the range, max height and flight time using the real formulas. Walls and wind depend on the difficulty |
 | 📐 **Formulas** | A formula sheet for every topic |
 | 📈 **Progress** | XP and levels, a daily goal, a day streak, and topic mastery based on your last 20 answers |
 
