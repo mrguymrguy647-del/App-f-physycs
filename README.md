@@ -52,7 +52,7 @@ Pick one on the Home, Quiz or Lab screen. You can switch any time.
 | 🧠 **Smart Mix** | 10-question rounds across all topics that pick more questions from your weakest topics |
 | 📚 **Topic quizzes** | Motion, Forces, Energy, Momentum, Waves, Electricity. Calculation questions are generated randomly, so they never run out, and conceptual questions check your understanding |
 | 🎯 **Projectile Lab** | Set the angle and launch speed to hit a target. Every shot shows the range, max height and flight time using the real formulas. Walls and wind depend on the difficulty |
-| 📐 **Formulas** | A formula sheet for every topic |
+| 📐 **Formulas** | A searchable formula sheet: every formula with the meaning and unit of each symbol and a tip for using it, plus units and prefixes, constants and an A–Z symbol glossary |
 | 📈 **Progress** | XP and levels, a daily goal, a day streak, and topic mastery based on your last 20 answers |
 
 Every answer comes with a worked explanation whose steps you can check by hand, and wrong options are built from **common mistakes** (like forgetting the ½ in ½mv² or averaging two speeds), so you learn to spot the traps.
@@ -69,7 +69,8 @@ Every answer comes with a worked explanation whose steps you can check by hand, 
 index.html          page layout
 css/style.css       styles (light + dark mode, mobile friendly)
 js/i18n.js          interface text in English and Arabic
-js/questions.js     question generators, conceptual questions, formulas (both languages)
+js/questions.js     question generators and conceptual questions (both languages)
+js/formulas.js      formula sheet: formulas, symbols with meanings and units, tips, units, constants
 js/school.js        School mode: units, lessons, exercises and exams
 js/projectile.js    Projectile Lab simulation + canvas rendering
 js/calculator.js    scientific calculator (safe expression parser, no eval) and its panel

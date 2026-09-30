@@ -241,7 +241,9 @@
     <section id="view-formulas" class="view">
       <h2 data-i18n="formulas.title"></h2>
       <p class="muted" data-i18n="formulas.sub"></p>
-      <div class="grid formulas" id="formula-grid"></div>
+      <input id="formula-search" class="fsearch" type="search" autocomplete="off" data-i18n-placeholder="formulas.search" data-i18n-aria="formulas.search" />
+      <p class="muted center" id="formula-empty" data-i18n="formulas.noMatch" hidden></p>
+      <div id="formula-grid"></div>
     </section>
 
     <!-- PROGRESS -->
@@ -341,6 +343,7 @@
 
   <script src="js/i18n.js"></script>
   <script src="js/questions.js"></script>
+  <script src="js/formulas.js"></script>
   <script src="js/school.js"></script>
   <script src="js/projectile.js"></script>
   <script src="js/calculator.js"></script>

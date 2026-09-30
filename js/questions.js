@@ -276,7 +276,7 @@
             `${iso('h = ½·g·t²')}، إذن ${iso(`t = √(2h/g) = √(2 × ${h} / ${o.g}) = ${fmt(t)} s`)}.`),
         };
       }),
-      gen(2, 'v_avg = (d₁ + d₂) / (t₁ + t₂)', function averageSpeed(o) {
+      gen(2, 'v_avg = total d / total t', function averageSpeed(o) {
         const d1 = rand(20, 120, 10), t1 = rand(1, 3), d2 = rand(20, 120, 10), t2 = rand(1, 4);
         const avg = (d1 + d2) / (t1 + t2);
         const wrong = (d1 / t1 + d2 / t2) / 2;
@@ -311,7 +311,7 @@
             `زمن التحليق ${iso('t = 2v·sinθ/g')} والسرعة الأفقية ${iso('v·cosθ')}، إذن ${iso(`R = v²·sin(2θ)/g = ${v}² × sin ${2 * th}° / ${o.g} = ${fmt(R)} m`)}.`),
         };
       }),
-      gen(3, 'v² = u² − 2·g·h', function upwardThrow(o) {
+      gen(3, 'H = u² / (2g)', function upwardThrow(o) {
         const v = rand(5, 40);
         const H = (v * v) / (2 * o.g);
         return {
@@ -337,7 +337,7 @@
     ],
 
     forces: [
-      gen(1, 'F = m·a', function newtonSecond(o) {
+      gen(1, 'F_net = m·a', function newtonSecond(o) {
         const m = rand(2, 50), a = rand(0.5, 10, o.easy ? 1 : 0.5);
         const F = m * a;
         return {
@@ -348,7 +348,7 @@
             `قانون نيوتن الثاني: ${iso(`F = m·a = ${m} × ${a} = ${fmt(F)} N`)}.`),
         };
       }),
-      gen(1, 'a = F / m', function accelerationFromForce(o) {
+      gen(1, 'a = F_net / m', function accelerationFromForce(o) {
         const m = rand(2, 40), F = rand(10, 400, 10);
         const a = F / m;
         return {
@@ -418,7 +418,7 @@
             `على امتداد المنحدر: مركبة الجاذبية ${iso('m·g·sinθ')} والاحتكاك ${iso('μ·m·g·cosθ')} (القوة العمودية ${iso('m·g·cosθ')}). ${iso(`a = g(sinθ − μcosθ) = ${o.g} × (sin ${th}° − ${mu} × cos ${th}°) = ${fmt(a)} m/s²`)}.`),
         };
       }),
-      gen(3, 'N − m·g = m·a', function elevator(o) {
+      gen(3, 'N = m·(g ± a)', function elevator(o) {
         const m = rand(40, 100, 5), a = rand(0.5, 3, 0.5), up = Math.random() < 0.5;
         const N = m * (o.g + (up ? a : -a));
         const sign = up ? '+' : '−';
@@ -430,7 +430,7 @@
             `القوة المحصلة = ${iso('m·a')}: ${iso(`N − m·g = m·(${sign}${a})`)}، إذن ${iso(`N = m(g ${sign} a) = ${m} × (${o.g} ${sign} ${a}) = ${fmt(N)} N`)}. ستشعر أنك ${up ? 'أثقل' : 'أخف'}!`),
         };
       }),
-      gen(3, 'F_net = (m₁ + m₂)·a', function pulley(o) {
+      gen(3, 'a = m₁·g / (m₁ + m₂)', function pulley(o) {
         const m1 = rand(1, 10), m2 = rand(1, 20);
         const a = (m1 * o.g) / (m1 + m2);
         return {
@@ -563,7 +563,7 @@
             `${iso(`Δp = m·v − m·u = ${m} × (${v} − ${u}) = ${fmt(dp)} kg·m/s`)}.`),
         };
       }),
-      gen(2, 'F·Δt = m·Δv', function impulse(o) {
+      gen(2, 'F·Δt = Δp = m·(v − u)', function impulse(o) {
         const m = rand(1, 20), F = rand(10, 200, 10), t = rand(0.1, 2, 0.1);
         const v = (F * t) / m;
         return {
@@ -574,18 +574,18 @@
             `الدفع = التغير في الزخم: ${iso('F·Δt = m·v')}، إذن ${iso(`v = F·Δt / m = ${F} × ${t} / ${m} = ${fmt(v)} m/s`)}.`),
         };
       }),
-      gen(2, 'm₁·v₁ = (m₁ + m₂)·v', function inelastic(o) {
+      gen(2, 'v = m₁u₁ / (m₁ + m₂)', function inelastic(o) {
         const m1 = rand(500, 2000, 100), v1 = rand(5, 25), m2 = rand(500, 2000, 100);
         const v = (m1 * v1) / (m1 + m2);
         return {
           prompt: L(o, `A ${m1} kg car moving at ${v1} m/s crashes into a stationary ${m2} kg car and they stick together. How fast do they move just after the collision?`,
             `سيارة كتلتها ${nu(m1, 'kg')} تسير بسرعة ${nu(v1, 'm/s')} تصطدم بسيارة ساكنة كتلتها ${nu(m2, 'kg')} فتلتحمان معًا. ما سرعتهما بعد التصادم مباشرة؟`),
           answer: v, unit: 'm/s', mistakes: [v1 / 2, (m1 * v1) / m2, v1],
-          explanation: L(o, `Momentum is conserved: m₁v₁ = (m₁ + m₂)·v ⇒ v = ${m1} × ${v1} / (${m1} + ${m2}) = ${fmt(v)} m/s.`,
-            `الزخم محفوظ: ${iso('m₁v₁ = (m₁ + m₂)·v')}، إذن ${iso(`v = ${m1} × ${v1} / (${m1} + ${m2}) = ${fmt(v)} m/s`)}.`),
+          explanation: L(o, `Momentum is conserved: m₁u₁ = (m₁ + m₂)·v ⇒ v = ${m1} × ${v1} / (${m1} + ${m2}) = ${fmt(v)} m/s.`,
+            `الزخم محفوظ: ${iso('m₁u₁ = (m₁ + m₂)·v')}، إذن ${iso(`v = ${m1} × ${v1} / (${m1} + ${m2}) = ${fmt(v)} m/s`)}.`),
         };
       }),
-      gen(2, '0 = m₁·v₁ − m₂·v₂', function recoil(o) {
+      gen(2, 'm₁u₁ + m₂u₂ = m₁v₁ + m₂v₂', function recoil(o) {
         const mb = rand(0.01, 0.05, 0.01), vb = rand(200, 800, 50), mg = rand(2, 6);
         const v = (mb * vb) / mg;
         return {
@@ -596,18 +596,18 @@
             `الزخم الكلي يبدأ صفرًا، لذا ${iso('m_bullet·v_bullet = m_rifle·v_rifle')}، إذن ${iso(`v = ${mb} × ${vb} / ${mg} = ${fmt(v)} m/s`)}.`),
         };
       }),
-      gen(3, 'm₁u₁ = m₁v₁ + m₂v₂,  ½m₁u₁² = ½m₁v₁² + ½m₂v₂²', function elastic(o) {
+      gen(3, 'v₂ = 2·m₁·u₁ / (m₁ + m₂)', function elastic(o) {
         const m1 = rand(1, 10), v1 = rand(2, 20), m2 = rand(1, 10);
         const v2 = (2 * m1 * v1) / (m1 + m2);
         return {
           prompt: L(o, `A ${m1} kg ball moving at ${v1} m/s hits a stationary ${m2} kg ball head-on in a perfectly elastic collision. How fast does the ${m2} kg ball move afterwards?`,
             `كرة كتلتها ${nu(m1, 'kg')} تتحرك بسرعة ${nu(v1, 'm/s')} تصطدم تصادمًا مباشرًا مرنًا تمامًا بكرة ساكنة كتلتها ${nu(m2, 'kg')}. ما سرعة الكرة التي كتلتها ${nu(m2, 'kg')} بعد التصادم؟`),
           answer: v2, unit: 'm/s', mistakes: [(m1 * v1) / (m1 + m2), v1 === v2 ? v1 / 2 : v1, (m1 * v1) / m2],
-          explanation: L(o, `Solving conservation of momentum and kinetic energy together (target at rest) gives v₂ = 2m₁v₁ / (m₁ + m₂) = 2 × ${m1} × ${v1} / ${m1 + m2} = ${fmt(v2)} m/s.`,
-            `بحل معادلتي حفظ الزخم وحفظ الطاقة الحركية معًا (والهدف ساكن) نحصل على ${iso(`v₂ = 2m₁v₁ / (m₁ + m₂) = 2 × ${m1} × ${v1} / ${m1 + m2} = ${fmt(v2)} m/s`)}.`),
+          explanation: L(o, `Solving conservation of momentum and kinetic energy together (target at rest) gives v₂ = 2m₁u₁ / (m₁ + m₂) = 2 × ${m1} × ${v1} / ${m1 + m2} = ${fmt(v2)} m/s.`,
+            `بحل معادلتي حفظ الزخم وحفظ الطاقة الحركية معًا (والهدف ساكن) نحصل على ${iso(`v₂ = 2m₁u₁ / (m₁ + m₂) = 2 × ${m1} × ${v1} / ${m1 + m2} = ${fmt(v2)} m/s`)}.`),
         };
       }),
-      gen(3, 'F = Δp / Δt', function reboundForce(o) {
+      gen(3, 'F·Δt = Δp = m·(v − u)', function reboundForce(o) {
         const m = rand(0.1, 1, 0.1), v = rand(5, 30), v2 = rand(2, v - 1), t = rand(0.01, 0.1, 0.01);
         const F = (m * (v + v2)) / t;
         return {
@@ -778,7 +778,7 @@
             `${iso(`P = V·I = ${V} × ${I} = ${fmt(P)} W`)}.`),
         };
       }),
-      gen(2, 'R = R₁ + R₂ + R₃', function series(o) {
+      gen(2, 'R = R₁ + R₂ + …', function series(o) {
         const rs = [rand(2, 50), rand(2, 50), rand(2, 50)];
         const R = rs[0] + rs[1] + rs[2];
         const par = 1 / (1 / rs[0] + 1 / rs[1] + 1 / rs[2]);
@@ -812,7 +812,7 @@
             `حوّل إلى كيلوواط أولًا: ${iso(`${P} W = ${fmt(P / 1000)} kW`)}. ${iso(`E = P·t = ${fmt(P / 1000)} kW × ${h} h = ${fmt(E)} kWh`)}.`),
         };
       }),
-      gen(3, 'R = R₁ + (R₂·R₃)/(R₂ + R₃)', function mixedCircuit(o) {
+      gen(3, 'R = R₁ + R₂·R₃ / (R₂ + R₃)', function mixedCircuit(o) {
         const V = pick([6, 9, 12, 24]), R1 = rand(2, 20), R2 = rand(4, 40, 2), R3 = rand(4, 40, 2);
         const Rp = r4((R2 * R3) / (R2 + R3));
         const Rt = r4(R1 + Rp);
@@ -825,7 +825,7 @@
             `المقاومان على التوازي: ${iso(`${R2} × ${R3} / (${R2} + ${R3}) = ${f4(Rp)} Ω`)}. المقاومة الكلية ${iso(`= ${R1} + ${f4(Rp)} = ${f4(Rt)} Ω`)}. ${iso(`I = V/R = ${V} / ${f4(Rt)} = ${fmt(I)} A`)}.`),
         };
       }),
-      gen(3, 'P = I²·R', function seriesPower(o) {
+      gen(3, 'P = V·I = I²·R = V² / R', function seriesPower(o) {
         const V = pick([6, 9, 12, 24]), R1 = rand(2, 30), R2 = rand(2, 30);
         const I = r4(V / (R1 + R2));
         const P = I * I * R1;
@@ -1014,57 +1014,6 @@
     ],
   };
 
-  // ---------- formula reference ----------
-  const f = (formula, en, ar) => [formula, { en, ar }];
-  const FORMULAS = {
-    kinematics: [
-      f('v = d / t', 'speed = distance ÷ time', 'السرعة = المسافة ÷ الزمن'),
-      f('v = u + a·t', 'final velocity after accelerating', 'السرعة النهائية بعد التسارع'),
-      f('s = u·t + ½·a·t²', 'displacement with constant acceleration', 'الإزاحة بتسارع ثابت'),
-      f('v² = u² + 2·a·s', 'no time needed', 'دون الحاجة إلى الزمن'),
-      f('R = v²·sin(2θ) / g', 'range of a projectile on flat ground', 'مدى المقذوف على أرض مستوية'),
-      f('x = v·t,  h = ½·g·t²', 'horizontal launch: split into x and y', 'القذف الأفقي: افصل الحركة إلى x و y'),
-    ],
-    forces: [
-      f('F = m·a', "Newton's 2nd law", 'قانون نيوتن الثاني'),
-      f('W = m·g', 'weight (g = 9.8 m/s², or 10 in Beginner and School)', 'الوزن (g = 9.8 m/s²، أو 10 في المبتدئ والمدرسة)'),
-      f('f = μ·N', 'friction force (N = normal force)', 'قوة الاحتكاك (N القوة العمودية)'),
-      f('F = k·x', "Hooke's law for springs", 'قانون هوك للنوابض'),
-      f('a = g·(sin θ − μ·cos θ)', 'sliding down a slope with friction', 'الانزلاق على منحدر مع احتكاك'),
-      f('N = m·(g ± a)', 'apparent weight in an accelerating lift', 'الوزن الظاهري في مصعد متسارع'),
-    ],
-    energy: [
-      f('KE = ½·m·v²', 'kinetic energy', 'الطاقة الحركية'),
-      f('PE = m·g·h', 'gravitational potential energy', 'طاقة الوضع الجاذبية'),
-      f('E = ½·k·x²', 'energy stored in a spring', 'الطاقة المختزنة في نابض'),
-      f('W = F·d·cos θ', 'work done by a force', 'الشغل المبذول بقوة'),
-      f('P = W / t', 'power = work ÷ time', 'القدرة = الشغل ÷ الزمن'),
-      f('η = E_out / E_in × 100%', 'efficiency: useful energy out ÷ energy in', 'الكفاءة: الطاقة المفيدة الخارجة ÷ الطاقة الداخلة'),
-    ],
-    momentum: [
-      f('p = m·v', 'momentum', 'الزخم (كمية الحركة)'),
-      f('F·Δt = Δp', 'impulse = change in momentum', 'الدفع = التغير في الزخم'),
-      f('m₁u₁ + m₂u₂ = m₁v₁ + m₂v₂', 'conservation of momentum', 'حفظ الزخم'),
-      f('v₂ = 2m₁v₁ / (m₁ + m₂)', 'elastic collision, target at rest', 'تصادم مرن والهدف ساكن'),
-    ],
-    waves: [
-      f('v = f·λ', 'wave speed', 'سرعة الموجة'),
-      f('T = 1 / f', 'period', 'الزمن الدوري'),
-      f('d = v·t / 2', 'echo distance', 'بُعد مصدر الصدى'),
-      f('fₙ = n·v / (2L)', 'harmonics on a string fixed at both ends', 'توافقيات وتر مثبّت من طرفيه'),
-      f('v = √(T / μ)', 'wave speed on a string', 'سرعة الموجة على وتر'),
-      f("f' = f·v / (v ∓ v_s)", 'Doppler effect, moving source (− when approaching)', 'ظاهرة دوبلر لمصدر متحرك (− عند الاقتراب)'),
-    ],
-    electricity: [
-      f('V = I·R', "Ohm's law", 'قانون أوم'),
-      f('P = V·I = I²R = V²/R', 'electrical power', 'القدرة الكهربائية'),
-      f('R = R₁ + R₂ + …', 'series resistors', 'مقاومات على التوالي'),
-      f('1/R = 1/R₁ + 1/R₂ + …', 'parallel resistors', 'مقاومات على التوازي'),
-      f('E = P·t', 'energy (kWh when P is in kW and t in hours)', 'الطاقة (kWh عندما تكون P بالكيلوواط و t بالساعات)'),
-      f('V = E − I·r', 'terminal voltage with internal resistance', 'فرق الجهد مع مقاومة داخلية'),
-    ],
-  };
-
   // ---------- public API ----------
   // Build a question from one generator with the given settings.
   function fromGenerator(topicId, chosen, opts) {
@@ -1110,7 +1059,7 @@
   }
 
   const api = {
-    G, TOPICS, DIFFICULTIES, DIFF, GENERATORS, CONCEPTS, FORMULAS,
+    G, TOPICS, DIFFICULTIES, DIFF, GENERATORS, CONCEPTS,
     generate, fromGenerator, findGenerator, pickWeightedTopic,
     fmt, plain, sci, iso, nu, L, rand, pick, shuffle, gen,
     numeric, typed, conceptual, parseAnswer, checkTyped,

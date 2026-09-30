@@ -80,10 +80,6 @@ test('generate() respects each difficulty and language', () => {
       }
     }
   }
-  for (const t of Q.TOPICS) {
-    assert.ok(Q.FORMULAS[t.id].length > 0, `no formulas for ${t.id}`);
-    Q.FORMULAS[t.id].forEach(([, d]) => assert.ok(d.en && ARABIC.test(d.ar), `formula description missing: ${d.en}`));
-  }
 });
 
 test('typed answers: parsing and 2% tolerance', () => {
@@ -285,4 +281,43 @@ test('calculator: results display like the game and paste into answers', () => {
   for (const v of [1357.6450, 1.5e11, 0.000314, 42]) {
     assert.ok(Math.abs(Q.parseAnswer(C.forAnswerBox(v)) - v) / v < 1e-5, `answer box text for ${v} parses back`);
   }
+});
+
+// ---------- formula sheet ----------
+const FS = require('../js/formulas.js');
+
+test('formula sheet: every topic, every symbol explained with a unit, in both languages', () => {
+  for (const t of Q.TOPICS) {
+    const sec = FS.SECTIONS.find((x) => x.id === t.id);
+    assert.ok(sec && sec.formulas.length >= 5, `formula sheet section for ${t.id}`);
+  }
+  for (const sy of Object.values(FS.SYMBOLS)) {
+    assert.ok(sy.sym && sy.name.en && ARABIC.test(sy.name.ar), `symbol ${sy.id} needs a meaning in both languages`);
+    assert.ok(typeof sy.unit === 'string', `symbol ${sy.id} needs a unit ('' for none)`);
+  }
+  const used = new Set();
+  for (const sec of FS.SECTIONS) {
+    for (const f of sec.formulas) {
+      assert.ok(f.name.en && ARABIC.test(f.name.ar), `name for ${f.formula}`);
+      if (f.tip) assert.ok(f.tip.en && ARABIC.test(f.tip.ar), `tip for ${f.formula}`);
+      assert.ok(f.vars.length > 0, `${f.formula} lists its symbols`);
+      for (const v of f.vars) {
+        assert.ok(FS.SYMBOLS[v], `${f.formula}: unknown symbol id ${v}`);
+        used.add(v);
+        const base = FS.SYMBOLS[v].sym.split('_')[0];
+        assert.ok(f.formula.includes(base), `${f.formula} lists ${FS.SYMBOLS[v].sym}, which isn't in the formula`);
+      }
+    }
+  }
+  for (const id of Object.keys(FS.SYMBOLS)) assert.ok(used.has(id), `symbol ${id} is never used on the sheet`);
+  // every formula the game shows during questions appears on the sheet in some form
+  const sheet = FS.SECTIONS.flatMap((s) => s.formulas.map((f) => f.formula + ' ' + (f.tip ? f.tip.en : ''))).join(' | ').replace(/\s/g, '');
+  const missing = [];
+  for (const gens of Object.values(Q.GENERATORS)) {
+    for (const g of gens) {
+      const main = g.formula.split(',')[0].replace(/\s/g, '');
+      if (!sheet.includes(main)) missing.push(g.formula);
+    }
+  }
+  assert.deepStrictEqual(missing, [], 'quiz formulas missing from the sheet');
 });

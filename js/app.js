@@ -323,17 +323,112 @@
     });
   }
 
-  function renderFormulas() {
-    const grid = $('formula-grid');
-    grid.innerHTML = '';
-    Q.TOPICS.forEach((tp) => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `<h3>${tp.icon} ${tr(tp.name)}</h3>` +
-        Q.FORMULAS[tp.id].map(([f, d]) => `<div class="formula"><code>${f}</code><span class="muted small">${tr(d)}</span></div>`).join('');
-      grid.appendChild(card);
+  // ---------- formula sheet ----------
+  const FS = window.PhysicsFormulas;
+  const formulaOpen = { kinematics: true }; // which sections are expanded (kept across language switches)
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // In Arabic text, keep formulas and symbols left-to-right.
+  const MATH_RUN = /[A-Za-z0-9θμληΔ√(']['A-Za-z0-9θμληΔ_·×÷=+\-−/()√²³⁻⁰¹²³⁴⁵⁶⁷⁸⁹ₙ₁₂∓±%. ]*[A-Za-z0-9θμλη)²³⁰¹⁴⁵⁶⁷⁸⁹₁₂ₙ%']|[A-Za-z0-9θμλη]/g;
+  function bidi(text) {
+    if (I18N.lang !== 'ar') return esc(text);
+    let out = '', last = 0;
+    String(text).replace(MATH_RUN, (m, offset) => {
+      out += esc(text.slice(last, offset)) + `<bdi dir="ltr">${esc(m)}</bdi>`;
+      last = offset + m.length;
+      return m;
     });
+    return out + esc(String(text).slice(last));
   }
+  const unitCell = (u) => (u ? `<span class="funit" dir="ltr">${esc(u)}</span>` : `<span class="funit none">${t('formulas.noUnit')}</span>`);
+
+  function renderFormulas() {
+    const wrap = $('formula-grid');
+    const query = ($('formula-search').value || '').trim().toLowerCase();
+    const hit = (...parts) => !query || parts.join(' ').toLowerCase().includes(query);
+    wrap.innerHTML = '';
+    let shown = 0;
+
+    function section(id, icon, title, count, inner) {
+      const d = document.createElement('details');
+      d.className = 'card fsec';
+      d.dataset.sec = id;
+      d.open = !!query || !!formulaOpen[id];
+      d.innerHTML = `<summary><span class="fsec-icon">${icon}</span><b>${esc(title)}</b>${count !== null ? `<span class="fsec-count">${count}</span>` : ''}</summary>${inner}`;
+      d.addEventListener('toggle', () => { if (!query) formulaOpen[id] = d.open; });
+      wrap.appendChild(d);
+      shown++;
+    }
+
+    // one section per topic
+    FS.SECTIONS.forEach((sec) => {
+      const cards = sec.formulas.filter((f) => hit(
+        f.formula, tr(f.name), f.tip ? tr(f.tip) : '',
+        ...f.vars.map((v) => FS.SYMBOLS[v].sym + ' ' + tr(FS.SYMBOLS[v].name) + ' ' + FS.SYMBOLS[v].unit),
+      ));
+      if (!cards.length) return;
+      const html = '<div class="fcards">' + cards.map((f) => `
+        <article class="fcard">
+          <h4>${esc(tr(f.name))}</h4>
+          <code class="fbig">${esc(f.formula)}</code>
+          <table class="fvars">
+            <thead><tr><th>${t('formulas.symbol')}</th><th>${t('formulas.meaning')}</th><th>${t('formulas.unit')}</th></tr></thead>
+            <tbody>${f.vars.map((v) => {
+              const sy = FS.SYMBOLS[v];
+              return `<tr><td><code>${esc(sy.sym)}</code></td><td>${bidi(tr(sy.name))}</td><td>${unitCell(sy.unit)}</td></tr>`;
+            }).join('')}</tbody>
+          </table>
+          ${f.tip ? `<p class="ftip">💡 ${bidi(tr(f.tip))}</p>` : ''}
+        </article>`).join('') + '</div>';
+      section(sec.id, sec.icon, tr(sec.name), t('formulas.count', { n: cards.length }), html);
+    });
+
+    // units, prefixes, conversions
+    const units = FS.UNITS.filter(([q, sym, name, u]) => hit(tr(q), sym, tr(name), u));
+    const prefixes = FS.PREFIXES.filter(([p, name, means]) => hit(p, tr(name), means));
+    const conv = FS.CONVERSIONS.flat().filter((c) => hit(c));
+    if (units.length || prefixes.length || conv.length) {
+      let html = '';
+      if (units.length) {
+        html += `<div class="ftable-wrap"><table class="ftable">
+          <thead><tr><th>${t('formulas.quantity')}</th><th>${t('formulas.symbol')}</th><th>${t('formulas.unitName')}</th></tr></thead>
+          <tbody>${units.map(([q, sym, name, u]) => `<tr><td>${esc(tr(q))}</td><td><code>${esc(sym)}</code></td><td>${esc(tr(name))} ${unitCell(u)}</td></tr>`).join('')}</tbody></table></div>`;
+      }
+      if (prefixes.length) {
+        html += `<div class="ftable-wrap"><table class="ftable">
+          <thead><tr><th>${t('formulas.prefix')}</th><th></th><th>${t('formulas.prefixMeans')}</th></tr></thead>
+          <tbody>${prefixes.map(([p, name, means]) => `<tr><td><code>${esc(p)}</code></td><td>${esc(tr(name))}</td><td><span dir="ltr">× ${esc(means)}</span></td></tr>`).join('')}</tbody></table></div>`;
+      }
+      if (conv.length) {
+        html += `<h4 class="fsub">${t('formulas.conversions')}</h4><div class="fconv">${conv.map((c) => `<code>${esc(c)}</code>`).join('')}</div>`;
+      }
+      section('units', '📏', t('formulas.units'), null, html);
+    }
+
+    // constants
+    const consts = FS.CONSTANTS.filter(([sym, name, val, note]) => hit(sym, tr(name), val, tr(note)));
+    if (consts.length) {
+      section('constants', '📌', t('formulas.constants'), null, '<div class="fconsts">' + consts.map(([sym, name, val, note]) =>
+        `<div class="fconst"><code class="fbig">${esc(sym)} = ${esc(val)}</code><b>${esc(tr(name))}</b><span class="muted small">${bidi(tr(note))}</span></div>`).join('') + '</div>');
+    }
+
+    // glossary: every symbol, where it's used
+    const usedIn = {};
+    FS.SECTIONS.forEach((sec) => sec.formulas.forEach((f) => f.vars.forEach((v) => {
+      (usedIn[v] = usedIn[v] || new Set()).add(sec.icon);
+    })));
+    const gloss = Object.values(FS.SYMBOLS)
+      .filter((sy) => hit(sy.sym, tr(sy.name), sy.unit))
+      .sort((a, b) => a.sym.localeCompare(b.sym, 'en', { sensitivity: 'base' }) || tr(a.name).localeCompare(tr(b.name)));
+    if (gloss.length) {
+      section('glossary', '🔤', t('formulas.glossary'), gloss.length, `<p class="muted small">${t('formulas.glossarySub')}</p>
+        <div class="ftable-wrap"><table class="ftable">
+        <thead><tr><th>${t('formulas.symbol')}</th><th>${t('formulas.meaning')}</th><th>${t('formulas.unit')}</th></tr></thead>
+        <tbody>${gloss.map((sy) => `<tr><td><code>${esc(sy.sym)}</code></td><td>${bidi(tr(sy.name))} <span class="fwhere">${[...(usedIn[sy.id] || [])].join('')}</span></td><td>${unitCell(sy.unit)}</td></tr>`).join('')}</tbody></table></div>`);
+    }
+
+    $('formula-empty').hidden = shown > 0;
+  }
+  $('formula-search').addEventListener('input', renderFormulas);
 
   function renderProgress() {
     const li = levelInfo(stats.xp);

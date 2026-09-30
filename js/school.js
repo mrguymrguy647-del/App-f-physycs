@@ -628,8 +628,8 @@
           cards: [
             card('In a collision, objects push on each other with equal and opposite forces (Newton\'s third law). The result: the <b>total momentum</b> before equals the total momentum after. This is <b>conservation of momentum</b>.',
               'في التصادم، يدفع كل جسم الآخر بقوتين متساويتين ومتعاكستين (قانون نيوتن الثالث). والنتيجة: <b>الزخم الكلي</b> قبل التصادم يساوي الزخم الكلي بعده. هذا هو <b>حفظ الزخم</b>.'),
-            card('When objects stick together: <code>m₁·v₁ = (m₁ + m₂)·v</code>. A moving car hitting a parked car of the same mass: they move off together at half the speed.',
-              'عندما يلتحم الجسمان معًا: <code>m₁·v₁ = (m₁ + m₂)·v</code>. سيارة متحركة تصطدم بسيارة متوقفة لها الكتلة نفسها: تتحركان معًا بنصف السرعة.'),
+            card('When objects stick together: <code>m₁·u₁ = (m₁ + m₂)·v</code>, where u₁ is the speed before and v the speed after. A moving car hitting a parked car of the same mass: they move off together at half the speed.',
+              'عندما يلتحم الجسمان معًا: <code>m₁·u₁ = (m₁ + m₂)·v</code>، حيث u₁ السرعة قبل التصادم وv السرعة بعده. سيارة متحركة تصطدم بسيارة متوقفة لها الكتلة نفسها: تتحركان معًا بنصف السرعة.'),
             card('Explosions and recoil work the same way: before, the total momentum is zero; after, the pieces fly apart in opposite directions so their momenta still add up to zero.',
               'الانفجارات والارتداد تعمل بالطريقة نفسها: قبلها يكون الزخم الكلي صفرًا، وبعدها تتطاير الأجزاء في اتجاهين متعاكسين بحيث يبقى مجموع زخميهما صفرًا.'),
             example('<b>Example:</b> a 2 kg trolley at 6 m/s hits a still 1 kg trolley and they stick. <code>v = 2 × 6 / (2 + 1) = 4 m/s</code>.',
