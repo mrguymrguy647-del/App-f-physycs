@@ -243,43 +243,67 @@ test('worked explanations: every step adds up with the numbers shown', () => {
 
 // ---------- calculator ----------
 const C = require('../js/calculator.js');
+const keys = (seq) => { const e = C.createEngine(); seq.split(' ').forEach((k) => e.press(k)); return e; };
 
-test('calculator: order of operations, powers of ten, trig in degrees', () => {
-  const near = (expr, want, ans) => {
-    const got = C.evaluate(expr, ans);
-    assert.ok(Math.abs(got - want) <= 1e-9 * Math.max(1, Math.abs(want)), `${expr} = ${got}, expected ${want}`);
-  };
-  near('2+3×4', 14);
-  near('(2+3)×4', 20);
-  near('2÷4.7×10^3', 2 / 4700); // ×10^ right after a number is part of that number
-  near('4.7×10^-3', 0.0047);
-  near('2×10^3÷4', 500);
-  near('-2^2', -4);
-  near('2^3^2', 512);
-  near('3²+4²', 25);
-  near('√(9)+1', 4);
-  near('2√9', 6);
-  near('3(4+1)', 15);
-  near('2π', 2 * Math.PI);
-  near('(1+2', 3); // missing ")" is added
-  assert.strictEqual(C.evaluate('sin(30)'), 0.5);
-  assert.strictEqual(C.evaluate('cos(60)'), 0.5);
-  near('tan(45)', 1);
-  near('120×16×cos(45)', 1920 * Math.SQRT1_2);
-  near('log(1000)', 3);
-  near('Ans×2', 20, 10);
-  near('٤٫٥×2', 9);
-  for (const bad of ['5÷0', '√(-1)', 'tan(90)', '2++', '', '3)', 'Ans', 'abc']) {
-    assert.throws(() => C.evaluate(bad), `${bad} should be an error`);
+test('calculator: key sequences work like a real school calculator', () => {
+  const cases = [
+    ['2 add 3 mul 4 eq', 14], // × before +
+    ['( 2 add 3 ) mul 4 eq', 20],
+    ['3 add 4 mul ( 2 add 3 ) eq', 23],
+    ['2 ( 3 add 1 ) eq', 8], // 2(3+1) means 2 × (3+1)
+    ['3 0 sin', 0.5], // number first, then the function
+    ['0 . 5 2nd sin', 30],
+    ['4 5 tan', 1],
+    ['1 2 0 mul 1 6 mul 4 5 cos eq', 1920 * Math.SQRT1_2],
+    ['2 pow 1 0 eq', 1024],
+    ['8 2nd sqrt', 2], ['9 sqrt', 3], ['5 sq', 25], ['2 2nd sq', 8], ['4 inv', 0.25],
+    ['4 . 7 ee 3', 4700], ['4 . 7 ee 3 neg', 0.0047],
+    ['2 div 4 . 7 ee 3 eq', 2 / 4700], // EE belongs to the number
+    ['1 ee 1 2 mul 1 ee 1 2 eq', 1e24],
+    ['1 0 0 log', 2], ['2 2nd log', 100], ['1 ln', 0], ['0 2nd ln', 1],
+    ['5 fact', 120], ['5 2nd fact 2 eq', 10],
+    ['2 add 3 eq mul 2 eq', 10], // carry on from the result
+    ['2 add mul 3 eq', 6], // change your mind about the operator
+    ['5 0 0 add 1 0 2nd 2 eq', 550], // 500 + 10%
+    ['7 sto onac rcl', 7],
+    ['2 add 3 eq onac ans mul 2 eq', 10],
+    ['1 8 0 2nd drg', Math.PI], // DRG▸ converts 180° to radians
+    ['1 2 3 4 del', 123],
+    ['6 sub 2 2nd pi eq', -4], // x⇄y swaps: 2 − 6
+  ];
+  for (const [seq, want] of cases) {
+    const got = keys(seq).value();
+    assert.ok(Math.abs(got - want) <= 1e-9 * Math.max(1, Math.abs(want)), `${seq} gave ${got}, expected ${want}`);
+  }
+  for (const seq of ['5 div 0 eq', '9 neg sqrt', '0 inv', '9 0 tan', '2 2nd sin', '0 log']) {
+    const e = keys(seq);
+    assert.ok(e.view().error && e.view().main === 'Error', `${seq} should show Error`);
+    e.press('cec');
+    assert.ok(!e.view().error, 'CE/C clears an error');
   }
 });
 
-test('calculator: results display like the game and paste into answers', () => {
-  assert.strictEqual(C.formatResult(1357.645), '1357.645');
-  assert.strictEqual(C.formatResult(1.5e11), '1.5 × 10¹¹');
-  assert.strictEqual(C.formatResult(3e-9), '3 × 10⁻⁹');
-  for (const v of [1357.6450, 1.5e11, 0.000314, 42]) {
-    assert.ok(Math.abs(Q.parseAnswer(C.forAnswerBox(v)) - v) / v < 1e-5, `answer box text for ${v} parses back`);
+test('calculator: display, modes and expression line', () => {
+  let v = keys('1 . 5 ee 1 1').view();
+  assert.deepStrictEqual([v.main, v.exp], ['1.5', '11']);
+  v = keys('2 div 3 eq').view();
+  assert.strictEqual(v.main, '0.666666667'); // 10 digits, like the real screen
+  v = keys('2nd ee 2 2 div 3 eq').view(); // FIX 2
+  assert.strictEqual(v.main, '0.67');
+  v = keys('2nd 8 1 2 3 4 5 eq').view(); // SCI
+  assert.deepStrictEqual([v.main, v.exp], ['1.2345', '04']);
+  v = keys('2nd 9 1 2 3 4 5 eq').view(); // ENG: exponent is a multiple of 3
+  assert.deepStrictEqual([v.main, v.exp], ['12.345', '03']);
+  v = keys('1 ee 1 2 mul 1 ee 1 2 eq').view();
+  assert.deepStrictEqual([v.main, v.exp], ['1', '24']);
+  assert.strictEqual(keys('1 2 0 mul 1 6 mul 4 5 cos eq').view().line, '120 × 16 × cos(45) =');
+  assert.strictEqual(keys('( 3 0 ) sin').view().line, 'sin(30)');
+  assert.strictEqual(keys('drg').view().angle, 'RAD');
+  assert.ok(keys('2nd').view().second);
+  assert.ok(keys('7 sto').view().mem);
+  assert.strictEqual(keys('( 1 add').view().parens, 1);
+  for (const val of [1357.645, 1.5e11, 0.000314, 42]) {
+    assert.ok(Math.abs(Q.parseAnswer(C.forAnswerBox(val)) - val) / val < 1e-5, `answer box text for ${val}`);
   }
 });
 

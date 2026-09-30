@@ -59,7 +59,7 @@ Every answer comes with a worked explanation whose steps you can check by hand, 
 
 **Numbers:** answers of 1000 or more (and below 0.01) are written with powers of ten, like `2.4 × 10³`, and are rounded to 3 significant figures. In Hardcore, type them as `2.4×10^3` or `2.4e3`, or use the **×10ⁿ** button (phone keypads have no ×, ^ or e). Arabic digits like ٢٫٤ work too.
 
-**🧮 Calculator:** tap the round button in the corner on any screen. It has sin/cos/tan (in degrees), √, x², powers, ×10ⁿ, π and Ans, shows the current question at the top, and shows the result rounded to 3 significant figures like the game's answers. In Hardcore, **Use in my answer** copies the result into the answer box. It's allowed in exams too.
+**🧮 Calculator:** tap the round button in the corner on any screen. The PQ-30 works like a classic school scientific calculator: type the number, then the function (`30 SIN` = 0.5), with correct order of operations and brackets, a green **2nd** key for the functions printed above the keys (SIN⁻¹, 10ˣ, eˣ, x³, ³√x, %, nCr…), **EE** for powers of ten, DEG/RAD/GRAD, memory (STO, RCL, SUM, EXC), and FIX/SCI/ENG display modes. It shows the current question and the result rounded to 3 significant figures, and in Hardcore **Use in answer** copies the result into the answer box. It works with a keyboard too, and it's allowed in exams.
 
 **Tips:** press `1`–`4` to answer and `Enter` to go to the next question. Use g = 9.8 m/s².
 
