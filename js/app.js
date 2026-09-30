@@ -634,6 +634,7 @@
       });
     }
     renderQuizChrome();
+    if (calc.isOpen) calc.refresh();
     startTimer();
   }
 
@@ -800,6 +801,7 @@
     $('q-next').hidden = false;
     $('q-next').textContent = isLastQuestion() ? t('quiz.results') : t('quiz.next');
     $('q-next').focus();
+    if (calc.isOpen) calc.refresh();
   }
 
   $('q-next').addEventListener('click', () => {
@@ -1075,6 +1077,8 @@
   // ---------- keyboard ----------
   document.addEventListener('keydown', (e) => {
     if (!$('confirm').hidden) { if (e.key === 'Escape') closeConfirm(false); return; }
+    if (e.target.closest && e.target.closest('#calc-panel')) return; // keys pressed inside the calculator
+    if (calc.isOpen && e.key === 'Escape') { calc.close(); return; }
     if (!round || round.done || currentView !== 'quiz') return;
     if (!round.answered && round.current.kind !== 'typed' && /^[1-4]$/.test(e.key)) answer(+e.key - 1);
     else if (round.answered && e.key === 'Enter' && document.activeElement !== $('q-next')) {
@@ -1122,6 +1126,18 @@
       }
       save();
       renderHud();
+    },
+  });
+
+  // ---------- calculator ----------
+  const calc = window.PhysicsCalculator.mount({
+    t,
+    fmt: Q.fmt,
+    // In Hardcore the result can be copied into the answer box.
+    questionText: () => (currentView === 'quiz' && round && round.current && !round.done ? round.current.prompt : ''),
+    answerTarget: () => {
+      const input = $('q-input');
+      return currentView === 'quiz' && round && !round.answered && round.current && round.current.kind === 'typed' && !input.disabled ? input : null;
     },
   });
 

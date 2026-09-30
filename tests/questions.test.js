@@ -244,3 +244,45 @@ test('worked explanations: every step adds up with the numbers shown', () => {
     }
   }
 });
+
+// ---------- calculator ----------
+const C = require('../js/calculator.js');
+
+test('calculator: order of operations, powers of ten, trig in degrees', () => {
+  const near = (expr, want, ans) => {
+    const got = C.evaluate(expr, ans);
+    assert.ok(Math.abs(got - want) <= 1e-9 * Math.max(1, Math.abs(want)), `${expr} = ${got}, expected ${want}`);
+  };
+  near('2+3×4', 14);
+  near('(2+3)×4', 20);
+  near('2÷4.7×10^3', 2 / 4700); // ×10^ right after a number is part of that number
+  near('4.7×10^-3', 0.0047);
+  near('2×10^3÷4', 500);
+  near('-2^2', -4);
+  near('2^3^2', 512);
+  near('3²+4²', 25);
+  near('√(9)+1', 4);
+  near('2√9', 6);
+  near('3(4+1)', 15);
+  near('2π', 2 * Math.PI);
+  near('(1+2', 3); // missing ")" is added
+  assert.strictEqual(C.evaluate('sin(30)'), 0.5);
+  assert.strictEqual(C.evaluate('cos(60)'), 0.5);
+  near('tan(45)', 1);
+  near('120×16×cos(45)', 1920 * Math.SQRT1_2);
+  near('log(1000)', 3);
+  near('Ans×2', 20, 10);
+  near('٤٫٥×2', 9);
+  for (const bad of ['5÷0', '√(-1)', 'tan(90)', '2++', '', '3)', 'Ans', 'abc']) {
+    assert.throws(() => C.evaluate(bad), `${bad} should be an error`);
+  }
+});
+
+test('calculator: results display like the game and paste into answers', () => {
+  assert.strictEqual(C.formatResult(1357.645), '1357.645');
+  assert.strictEqual(C.formatResult(1.5e11), '1.5 × 10¹¹');
+  assert.strictEqual(C.formatResult(3e-9), '3 × 10⁻⁹');
+  for (const v of [1357.6450, 1.5e11, 0.000314, 42]) {
+    assert.ok(Math.abs(Q.parseAnswer(C.forAnswerBox(v)) - v) / v < 1e-5, `answer box text for ${v} parses back`);
+  }
+});

@@ -291,10 +291,59 @@
 
   <canvas class="confetti" id="confetti" aria-hidden="true" hidden></canvas>
 
+  <button class="calc-fab" id="calc-fab" aria-expanded="false" aria-controls="calc-panel" data-i18n-aria="calc.open" data-i18n-title="calc.open">🧮</button>
+  <section class="calc-panel" id="calc-panel" role="dialog" aria-labelledby="calc-title" hidden>
+    <div class="calc-head">
+      <b id="calc-title" data-i18n="calc.title"></b>
+      <span class="calc-deg" data-i18n="calc.deg"></span>
+      <button type="button" class="calc-close" id="calc-close" data-i18n-aria="calc.close">✕</button>
+    </div>
+    <p class="calc-question" id="calc-question" hidden></p>
+    <div class="calc-screen" dir="ltr">
+      <input id="calc-input" type="text" inputmode="none" autocomplete="off" spellcheck="false" aria-label="Expression" placeholder="0" />
+      <div class="calc-result" id="calc-result" aria-live="polite"></div>
+      <div class="calc-sf" id="calc-sf" dir="auto"></div>
+    </div>
+    <button type="button" class="btn primary small calc-use" id="calc-use" data-i18n="calc.use" hidden></button>
+    <div class="calc-keys" id="calc-keys" dir="ltr">
+        <button type="button" data-k="sin(" class="ck fn">sin</button>
+        <button type="button" data-k="cos(" class="ck fn">cos</button>
+        <button type="button" data-k="tan(" class="ck fn">tan</button>
+        <button type="button" data-k="√(" class="ck fn">√</button>
+        <button type="button" data-k="²" class="ck fn">x²</button>
+        <button type="button" data-k="(" class="ck op">(</button>
+        <button type="button" data-k=")" class="ck op">)</button>
+        <button type="button" data-k="^" class="ck op">xʸ</button>
+        <button type="button" data-k="×10^" class="ck op">×10ⁿ</button>
+        <button type="button" data-k="π" class="ck op">π</button>
+        <button type="button" data-k="7" class="ck ">7</button>
+        <button type="button" data-k="8" class="ck ">8</button>
+        <button type="button" data-k="9" class="ck ">9</button>
+        <button type="button" data-k="÷" class="ck op">÷</button>
+        <button type="button" data-k="DEL" class="ck del">⌫</button>
+        <button type="button" data-k="4" class="ck ">4</button>
+        <button type="button" data-k="5" class="ck ">5</button>
+        <button type="button" data-k="6" class="ck ">6</button>
+        <button type="button" data-k="×" class="ck op">×</button>
+        <button type="button" data-k="AC" class="ck del">AC</button>
+        <button type="button" data-k="1" class="ck ">1</button>
+        <button type="button" data-k="2" class="ck ">2</button>
+        <button type="button" data-k="3" class="ck ">3</button>
+        <button type="button" data-k="-" class="ck op">−</button>
+        <button type="button" data-k="Ans" class="ck op">Ans</button>
+        <button type="button" data-k="0" class="ck ">0</button>
+        <button type="button" data-k="." class="ck ">.</button>
+        <button type="button" data-k="NEG" class="ck ">±</button>
+        <button type="button" data-k="+" class="ck op">+</button>
+        <button type="button" data-k="=" class="ck eq">=</button>
+    </div>
+  </section>
+
   <script src="js/i18n.js"></script>
   <script src="js/questions.js"></script>
   <script src="js/school.js"></script>
   <script src="js/projectile.js"></script>
+  <script src="js/calculator.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
