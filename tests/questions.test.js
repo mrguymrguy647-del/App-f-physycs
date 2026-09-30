@@ -14,7 +14,8 @@ function checkNumeric(name, raw, q) {
   assert.strictEqual(new Set(q.choices).size, 4, `${name}: duplicate choices ${q.choices}`);
   assert.ok(q.correctIndex >= 0 && q.correctIndex < 4);
   assert.ok(isFinite(q.answerValue) && q.answerValue > 0, `${name}: bad answer ${q.answerValue}`);
-  assert.ok(q.choices[q.correctIndex].startsWith(Q.fmt(q.answerValue)), `${name}: correct choice mismatch`);
+  const show = raw.format ? Q[raw.format] : Q.fmt;
+  assert.ok(q.choices[q.correctIndex].startsWith(show(q.answerValue)), `${name}: correct choice mismatch`);
   assert.ok(!BROKEN.test(raw.prompt + raw.explanation), `${name}: broken text: ${raw.prompt}`);
 }
 
@@ -91,6 +92,10 @@ test('typed answers: parsing and 2% tolerance', () => {
   assert.strictEqual(Q.parseAnswer('4.5e3'), 4500);
   assert.strictEqual(Q.parseAnswer('4.5 x 10^3'), 4500);
   assert.strictEqual(Q.parseAnswer('4.5×10^3'), 4500);
+  assert.strictEqual(Q.parseAnswer('4.5×10³'), 4500);
+  assert.strictEqual(Q.parseAnswer('5×10⁻³'), 0.005);
+  assert.strictEqual(Q.parseAnswer('4.5×10^-3'), 0.0045);
+  assert.strictEqual(Q.parseAnswer('٤٫٥×١٠^٣'), 4500);
   assert.ok(Number.isNaN(Q.parseAnswer('abc')));
   assert.ok(Number.isNaN(Q.parseAnswer('')));
   const q = { answerValue: 100 };
@@ -102,10 +107,17 @@ test('typed answers: parsing and 2% tolerance', () => {
 
 test('number formatting', () => {
   assert.strictEqual(Q.fmt(Math.sqrt((2 * 20) / Q.G)), '2.02');
-  assert.strictEqual(Q.fmt(12345), '12345');
+  assert.strictEqual(Q.fmt(500), '500');
+  assert.strictEqual(Q.fmt(2400), '2.4 × 10³');
+  assert.strictEqual(Q.fmt(12345), '1.23 × 10⁴');
+  assert.strictEqual(Q.fmt(999.7), '1 × 10³');
   assert.strictEqual(Q.fmt(0.012345), '0.0123');
+  assert.strictEqual(Q.fmt(0.004), '4 × 10⁻³');
   assert.strictEqual(Q.fmt(1.5e11), '1.5 × 10¹¹');
-  assert.strictEqual(Q.fmt(0.00042), '4.2 × 10⁻⁴');
+  assert.strictEqual(Q.fmt(101.92, 4), '101.9');
+  assert.strictEqual(Q.sci(380), '3.8 × 10²');
+  assert.strictEqual(Q.plain(45000), '45 000');
+  assert.strictEqual(Q.plain(0.0045), '0.0045');
 });
 
 test('weighted topic picker favours weak topics', () => {
@@ -134,9 +146,9 @@ test('interface text exists in both languages', () => {
   assert.strictEqual(I18N.t('sum.score', { a: 3, b: 5 }), '3 / 5 correct');
 });
 
-test('school: 7 units, 20 lessons, every lesson is complete in both languages', () => {
+test('school: 7 units, 21 lessons, every lesson is complete in both languages', () => {
   assert.strictEqual(S.UNITS.length, 7);
-  assert.strictEqual(S.LESSONS.length, 20);
+  assert.strictEqual(S.LESSONS.length, 21);
   for (const l of S.LESSONS) {
     assert.ok(l.title.en && ARABIC.test(l.title.ar), `${l.id}: title`);
     assert.ok(l.cards.length >= 3, `${l.id}: needs teaching cards`);
@@ -170,7 +182,7 @@ test('school: exercise sets and exams build valid questions', () => {
     }
     const final = S.buildSet(S.LESSONS, S.RULES.finalCount, lang);
     assert.strictEqual(final.length, S.RULES.finalCount);
-    assert.strictEqual(new Set(final.map((q) => q.lessonId)).size, 20, 'final exam covers every lesson');
+    assert.strictEqual(new Set(final.map((q) => q.lessonId)).size, Math.min(S.RULES.finalCount, S.LESSONS.length), 'final exam spreads across lessons');
   }
 });
 
@@ -181,6 +193,53 @@ test('school generators are valid in both languages', () => {
         const raw = gen.make({ g: 10, easy: true, ar });
         checkNumeric(name, raw, Q.numeric('x', raw));
         if (ar) assert.ok(ARABIC.test(raw.prompt), `${name}: Arabic missing`);
+      }
+    }
+  }
+});
+
+// ---------- worked explanations must add up ----------
+// Every "numbers = result" step is recomputed from the numbers exactly as shown,
+// so a student redoing the working by hand gets the same result as the game.
+const SUPD = { '⁰': 0, '¹': 1, '²': 2, '³': 3, '⁴': 4, '⁵': 5, '⁶': 6, '⁷': 7, '⁸': 8, '⁹': 9 };
+function evalShown(expr) {
+  const e = expr
+    .replace(/(\d(?:\.\d+)?) × 10(⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, (m, a, p) => `(${a}e${p.replace('⁻', '-').split('').map((c) => (c === '-' ? '-' : SUPD[c])).join('')})`)
+    .replace(/(sin|cos) (\d+(?:\.\d+)?)°/g, (m, f, d) => `Math.${f}(${d}*Math.PI/180)`)
+    .replace(/½/g, '0.5').replace(/√\(/g, 'Math.sqrt(').replace(/×|·/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/²/g, '**2')
+    .replace(/%/g, '');
+  if (!/^[\d\s.+\-*/()e]*(Math\.(sqrt|sin|cos|PI)[\d\s.+\-*/()e]*)*$/.test(e.replace(/Math\.(sqrt|sin|cos|PI)/g, '')) || !/\d/.test(e)) return null;
+  try { const v = Function(`return (${e})`)(); return isFinite(v) ? v : null; } catch (x) { return null; }
+}
+function checkSteps(name, explanation) {
+  const text = explanation.replace(/[⁦-⁩]/g, '');
+  const parts = text.split('=');
+  for (let k = 0; k < parts.length - 1; k++) {
+    const lhs = parts[k].trim().replace(/^.*?(?=[\d(√½])/, '').replace(/\s*[A-Za-zΩ%][A-Za-z/²·Ω%]*\s*$/, '');
+    const m = parts[k + 1].trim().match(/^(\d+(?:\.\d+)?(?: × 10⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)?)/);
+    if (!m || !/[×÷\-−+/·²√]/.test(lhs)) continue;
+    const a = evalShown(lhs), b = evalShown(m[1]);
+    if (a === null || b === null) continue;
+    // allowed error: rounding of the shown result to its last digit
+    const mant = m[1].split(' ×')[0];
+    const decimals = (mant.split('.')[1] || '').length;
+    const scale = / × /.test(m[1]) ? b / Number(mant) : 1;
+    const tol = 0.5 * Math.pow(10, -decimals) * scale * 1.001 + 1e-12;
+    const scaled = /× 100$/.test(lhs.trim()) ? a : a; // efficiency already includes × 100
+    assert.ok(Math.abs(scaled - b) <= tol, `${name}: "${lhs} = ${m[1]}" is really ${+a.toPrecision(6)}\n  in: ${explanation}`);
+  }
+}
+
+test('worked explanations: every step adds up with the numbers shown', () => {
+  const all = [];
+  for (const gens of Object.values(Q.GENERATORS)) all.push(...gens);
+  all.push(...Object.values(S.SCHOOL_GENERATORS));
+  for (const gen of all) {
+    for (let i = 0; i < 400; i++) {
+      for (const g of [10, 9.8]) {
+        const raw = gen.make({ g, easy: g === 10, ar: false });
+        checkSteps(gen.make.name, raw.explanation);
+        checkSteps(gen.make.name + ' (ar)', gen.make({ g, easy: g === 10, ar: true }).explanation);
       }
     }
   }

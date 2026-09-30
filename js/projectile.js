@@ -280,14 +280,14 @@
       ctx.textBaseline = 'alphabetic';
 
       // target
-      const t = state.target;
+      const tg = state.target;
       ctx.fillStyle = c.target;
-      ctx.fillRect(sx(t.x - t.w / 2), sy(0) - 6, t.w * SCALE, 6);
+      ctx.fillRect(sx(tg.x - tg.w / 2), sy(0) - 6, tg.w * SCALE, 6);
       ctx.beginPath();
-      ctx.moveTo(sx(t.x), sy(0) - 6); ctx.lineTo(sx(t.x), sy(0) - 34);
+      ctx.moveTo(sx(tg.x), sy(0) - 6); ctx.lineTo(sx(tg.x), sy(0) - 34);
       ctx.strokeStyle = c.target; ctx.lineWidth = 2; ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(sx(t.x), sy(0) - 34); ctx.lineTo(sx(t.x) + 16, sy(0) - 28); ctx.lineTo(sx(t.x), sy(0) - 22);
+      ctx.moveTo(sx(tg.x), sy(0) - 34); ctx.lineTo(sx(tg.x) + 16, sy(0) - 28); ctx.lineTo(sx(tg.x), sy(0) - 22);
       ctx.fill();
 
       // wall

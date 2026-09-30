@@ -69,18 +69,38 @@
     return a;
   }
   const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
-  // Round to 3 significant figures for display; scientific notation for very big/small values.
-  function fmt(x) {
+  // Round to `sig` significant figures (3 by default) for display. Numbers of 1000 or
+  // more, and below 0.01, use scientific notation with powers of ten: 2.4 × 10³.
+  function fmt(x, sig) {
+    sig = sig || 3;
     if (!isFinite(x)) return String(x);
     if (x === 0) return '0';
-    const a = Math.abs(x);
-    if (a >= 1e6 || a < 1e-3) {
-      const [m, e] = x.toExponential(2).split('e');
+    const rounded = Number(x.toPrecision(sig));
+    const a = Math.abs(rounded);
+    if (a >= 1000 || a < 0.01) {
+      const [m, e] = rounded.toExponential(sig - 1).split('e');
       return `${Number(m)} × 10${String(+e).split('').map((c) => SUP[c]).join('')}`;
     }
-    if (a >= 1000) return String(Math.round(x));
-    return String(Number(x.toPrecision(3)));
+    return String(rounded);
   }
+  // Plain decimal with digit groups (45 000, 0.0045) for questions about scientific notation itself.
+  function plain(x) {
+    const r = Number(x.toPrecision(6));
+    if (Math.abs(r) < 10000) return String(r);
+    return String(r).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+  // Always scientific notation (for questions that practise it).
+  function sci(x) {
+    const [m, e] = Number(x.toPrecision(3)).toExponential(2).split('e');
+    return `${Number(m)} × 10${String(+e).split('').map((c) => SUP[c]).join('')}`;
+  }
+  const FORMATS = { plain, sci };
+  // Intermediate values in multi-step problems are rounded to 4 significant figures and the
+  // next step uses exactly that rounded value, so every step of the worked explanation adds up.
+  const r4 = (x) => Number(x.toPrecision(4));
+  // Exact decimal for steps whose value is a short exact decimal (e.g. 0.4 × 26 × 9.8 = 101.92).
+  const ex = (x) => String(Number(x.toFixed(6)));
+  const f4 = (x) => fmt(x, 4);
   const rad = (deg) => (deg * Math.PI) / 180;
   const ORDINAL = {
     en: { 1: '1st (fundamental)', 2: '2nd', 3: '3rd' },
@@ -88,12 +108,19 @@
   };
 
   // Parse a typed answer: "12.5", "12,5", "4.5e19", "4.5 x 10^19", "4.5×10^19".
+  const SUP_REV = { '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9', '⁻': '-', '⁺': '+' };
   function parseAnswer(text) {
-    const s = String(text).trim().replace(/\s+/g, '').replace(/,/g, '.');
+    const s = String(text).trim()
+      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)) // Arabic-Indic digits
+      .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0)) // Persian digits
+      .replace(/[٫]/g, '.').replace(/[٬]/g, '')
+      .replace(/[−–]/g, '-')
+      .replace(/10([⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, (m, p) => '10^' + p.split('').map((c) => SUP_REV[c]).join(''))
+      .replace(/\s+/g, '').replace(/,/g, '.');
     const m = s.match(/^([-+]?\d*\.?\d+)(?:(?:[xX×*]10\^?([-+]?\d+))|(?:[eE]([-+]?\d+)))?$/);
     if (!m) return NaN;
     const exp = m[2] !== undefined ? +m[2] : m[3] !== undefined ? +m[3] : 0;
-    return parseFloat(m[1]) * Math.pow(10, exp);
+    return parseFloat(m[1] + 'e' + exp); // exact decimal parse, no floating-point drift
   }
   function checkTyped(q, text, tolerance) {
     const v = parseAnswer(text);
@@ -104,8 +131,9 @@
   // Build a multiple-choice question from a numeric answer and a list of
   // "common mistake" values. Falls back to scaled values if mistakes collide.
   function numeric(topic, q) {
+    const show = FORMATS[q.format] || fmt;
     const unit = q.unit ? ' ' + q.unit : '';
-    const correct = fmt(q.answer) + unit;
+    const correct = show(q.answer) + unit;
     const seen = new Set([correct]);
     const values = [q.answer];
     const choices = [correct];
@@ -115,7 +143,7 @@
       if (!isFinite(v) || v <= 0) return;
       // keep distractors clearly different from every existing choice
       if (values.some((u) => Math.abs(v - u) / Math.max(Math.abs(u), 1e-9) < 0.08)) return;
-      const s = fmt(v) + unit;
+      const s = show(v) + unit;
       if (seen.has(s)) return;
       seen.add(s);
       values.push(v);
@@ -140,6 +168,7 @@
 
   // Hardcore: no choices, the player types the number.
   function typed(topic, q) {
+    const show = FORMATS[q.format] || fmt;
     return {
       topic,
       kind: 'typed',
@@ -147,7 +176,7 @@
       unit: q.unit || '',
       explanation: q.explanation,
       answerValue: q.answer,
-      answerText: fmt(q.answer) + (q.unit ? ' ' + q.unit : ''),
+      answerText: show(q.answer) + (q.unit ? ' ' + q.unit : ''),
     };
   }
 
@@ -295,14 +324,14 @@
       }),
       gen(3, 'x = v·t,  h = ½·g·t²', function cliffThrow(o) {
         const h = pick([5, 10, 20, 45, 80]), v = rand(3, 25);
-        const t = Math.sqrt((2 * h) / o.g);
+        const t = r4(Math.sqrt((2 * h) / o.g));
         const x = v * t;
         return {
           prompt: L(o, `A ball is kicked horizontally at ${v} m/s off a cliff ${h} m high. How far from the base of the cliff does it land? (g = ${o.g} m/s²)`,
             `رُكلت كرة أفقيًا بسرعة ${nu(v, 'm/s')} من فوق جرف ارتفاعه ${nu(h, 'm')}. على أي بُعد من قاعدة الجرف تسقط؟ (${gtext(o)})`),
           answer: x, unit: 'm', mistakes: [v * Math.sqrt(h / o.g), (v * 2 * h) / o.g, 2 * x, t],
-          explanation: L(o, `Fall time only depends on height: t = √(2h/g) = ${fmt(t)} s. Horizontally it keeps ${v} m/s: x = v·t = ${fmt(x)} m.`,
-            `زمن السقوط يعتمد على الارتفاع فقط: ${iso(`t = √(2h/g) = ${fmt(t)} s`)}. أفقيًا تحافظ على ${nu(v, 'm/s')}: ${iso(`x = v·t = ${fmt(x)} m`)}.`),
+          explanation: L(o, `Fall time only depends on height: t = √(2h/g) = √(2 × ${h} / ${o.g}) = ${f4(t)} s. Horizontally it keeps ${v} m/s: x = v·t = ${v} × ${f4(t)} = ${fmt(x)} m.`,
+            `زمن السقوط يعتمد على الارتفاع فقط: ${iso(`t = √(2h/g) = √(2 × ${h} / ${o.g}) = ${f4(t)} s`)}. أفقيًا تحافظ على ${nu(v, 'm/s')}: ${iso(`x = v·t = ${v} × ${f4(t)} = ${fmt(x)} m`)}.`),
         };
       }),
     ],
@@ -365,15 +394,16 @@
       }),
       gen(2, 'f = μ·m·g', function friction(o) {
         const m = rand(5, 30), mu = pick([0.1, 0.2, 0.25, 0.3, 0.4]);
-        const f = mu * m * o.g;
+        const f = Number((mu * m * o.g).toFixed(6));
         const F = Math.ceil((f + rand(10, 80)) / 5) * 5;
-        const a = (F - f) / m;
+        const net = Number((F - f).toFixed(6));
+        const a = net / m;
         return {
           prompt: L(o, `A ${m} kg crate is pushed across the floor with a ${F} N horizontal force. The coefficient of kinetic friction is ${mu}. What is its acceleration? (g = ${o.g} m/s²)`,
             `يُدفع صندوق كتلته ${nu(m, 'kg')} على الأرض بقوة أفقية ${nu(F, 'N')}. معامل الاحتكاك الحركي ${iso(mu)}. ما تسارعه؟ (${gtext(o)})`),
           answer: a, unit: 'm/s²', mistakes: [F / m, (F + f) / m, mu * o.g],
-          explanation: L(o, `Friction f = μ·m·g = ${mu} × ${m} × ${o.g} = ${fmt(f)} N. Net force = ${F} − ${fmt(f)} = ${fmt(F - f)} N, so a = F_net / m = ${fmt(a)} m/s².`,
-            `الاحتكاك ${iso(`f = μ·m·g = ${mu} × ${m} × ${o.g} = ${fmt(f)} N`)}. القوة المحصلة ${iso(`= ${F} − ${fmt(f)} = ${fmt(F - f)} N`)}، إذن ${iso(`a = F_net / m = ${fmt(a)} m/s²`)}.`),
+          explanation: L(o, `Friction f = μ·m·g = ${mu} × ${m} × ${o.g} = ${ex(f)} N. Net force = ${F} − ${ex(f)} = ${ex(net)} N, so a = F_net / m = ${ex(net)} / ${m} = ${fmt(a)} m/s².`,
+            `الاحتكاك ${iso(`f = μ·m·g = ${mu} × ${m} × ${o.g} = ${ex(f)} N`)}. القوة المحصلة ${iso(`= ${F} − ${ex(f)} = ${ex(net)} N`)}، إذن ${iso(`a = F_net / m = ${ex(net)} / ${m} = ${fmt(a)} m/s²`)}.`),
         };
       }),
       gen(3, 'a = g·(sin θ − μ·cos θ)', function incline(o) {
@@ -482,28 +512,30 @@
       }),
       gen(3, 'm·g·h = ½·m·v² + E_lost', function frictionRamp(o) {
         const m = rand(2, 20), h = rand(3, 20);
-        const mgh = m * o.g * h;
+        const mgh = Number((m * o.g * h).toFixed(6));
         const lost = Math.round(mgh * rand(0.1, 0.5, 0.05));
-        const v = Math.sqrt((2 * (mgh - lost)) / m);
+        const ke = Number((mgh - lost).toFixed(6));
+        const v = Math.sqrt((2 * ke) / m);
         return {
           prompt: L(o, `A ${m} kg sledge slides from rest down a hill ${h} m high. Friction turns ${lost} J into heat on the way down. How fast is it going at the bottom? (g = ${o.g} m/s²)`,
             `تنزلق زلّاجة كتلتها ${nu(m, 'kg')} من السكون أسفل تل ارتفاعه ${nu(h, 'm')}. يحوّل الاحتكاك ${nu(lost, 'J')} إلى حرارة أثناء النزول. ما سرعتها عند أسفل التل؟ (${gtext(o)})`),
-          answer: v, unit: 'm/s', mistakes: [Math.sqrt(2 * o.g * h), Math.sqrt((2 * (mgh + lost)) / m), Math.sqrt((mgh - lost) / m)],
-          explanation: L(o, `Start: PE = m·g·h = ${fmt(mgh)} J. Minus ${lost} J lost leaves KE = ${fmt(mgh - lost)} J. v = √(2·KE/m) = √(2 × ${fmt(mgh - lost)} / ${m}) = ${fmt(v)} m/s.`,
-            `في البداية: ${iso(`PE = m·g·h = ${fmt(mgh)} J`)}. بعد طرح ${nu(lost, 'J')} المفقودة تبقى ${iso(`KE = ${fmt(mgh - lost)} J`)}. ${iso(`v = √(2·KE/m) = √(2 × ${fmt(mgh - lost)} / ${m}) = ${fmt(v)} m/s`)}.`),
+          answer: v, unit: 'm/s', mistakes: [Math.sqrt(2 * o.g * h), Math.sqrt((2 * (mgh + lost)) / m), Math.sqrt(ke / m)],
+          explanation: L(o, `Start: PE = m·g·h = ${m} × ${o.g} × ${h} = ${ex(mgh)} J. Minus the ${lost} J lost: KE = ${ex(mgh)} − ${lost} = ${ex(ke)} J. v = √(2·KE/m) = √(2 × ${ex(ke)} / ${m}) = ${fmt(v)} m/s.`,
+            `في البداية: ${iso(`PE = m·g·h = ${m} × ${o.g} × ${h} = ${ex(mgh)} J`)}. بعد طرح ${nu(lost, 'J')} المفقودة: ${iso(`KE = ${ex(mgh)} − ${lost} = ${ex(ke)} J`)}. ${iso(`v = √(2·KE/m) = √(2 × ${ex(ke)} / ${m}) = ${fmt(v)} m/s`)}.`),
         };
       }),
       gen(3, 'η = E_out / E_in × 100%', function efficiency(o) {
         const m = rand(20, 200, 10), h = rand(2, 20), t = rand(5, 60, 5);
-        const useful = m * o.g * h;
+        const useful = Number((m * o.g * h).toFixed(6));
         const P = Math.max(1, Math.round(useful / (t * rand(0.4, 0.9, 0.05))));
-        const eff = (useful / (P * t)) * 100;
+        const input = P * t;
+        const eff = (useful / input) * 100;
         return {
           prompt: L(o, `A motor with an input power of ${P} W lifts a ${m} kg load ${h} m in ${t} s. What is its efficiency? (g = ${o.g} m/s²)`,
             `محرك قدرته الداخلة ${nu(P, 'W')} يرفع حمولة كتلتها ${nu(m, 'kg')} مسافة ${nu(h, 'm')} خلال ${nu(t, 's')}. ما كفاءته؟ (${gtext(o)})`),
-          answer: eff, unit: '%', mistakes: [((P * t) / useful) * 100, (useful / P) * 100, 100 - eff],
-          explanation: L(o, `Useful energy = m·g·h = ${fmt(useful)} J. Energy in = P·t = ${P} × ${t} = ${P * t} J. Efficiency = ${fmt(useful)} / ${P * t} = ${fmt(eff)} %.`,
-            `الطاقة المفيدة ${iso(`= m·g·h = ${fmt(useful)} J`)}. الطاقة الداخلة ${iso(`= P·t = ${P} × ${t} = ${P * t} J`)}. الكفاءة ${iso(`= ${fmt(useful)} / ${P * t} = ${fmt(eff)} %`)}.`),
+          answer: eff, unit: '%', mistakes: [(input / useful) * 100, (useful / P) * 100, 100 - eff],
+          explanation: L(o, `Useful energy = m·g·h = ${m} × ${o.g} × ${h} = ${ex(useful)} J. Energy in = P·t = ${P} × ${t} = ${ex(input)} J. Efficiency = ${ex(useful)} / ${ex(input)} × 100 = ${fmt(eff)} %.`,
+            `الطاقة المفيدة ${iso(`= m·g·h = ${m} × ${o.g} × ${h} = ${ex(useful)} J`)}. الطاقة الداخلة ${iso(`= P·t = ${P} × ${t} = ${ex(input)} J`)}. الكفاءة ${iso(`= ${ex(useful)} / ${ex(input)} × 100 = ${fmt(eff)} %`)}.`),
         };
       }),
     ],
@@ -587,16 +619,18 @@
         };
       }),
       gen(3, 'ΔKE = KE_before − KE_after', function keLost(o) {
-        const m1 = rand(1, 10), v1 = rand(2, 15), m2 = rand(1, 10);
-        const vf = (m1 * v1) / (m1 + m2);
-        const before = 0.5 * m1 * v1 * v1, after = 0.5 * (m1 + m2) * vf * vf;
-        const lost = before - after;
+        let m1, v1, m2;
+        do { m1 = rand(1, 10); v1 = rand(2, 15); m2 = rand(1, 10); } while ((m1 * v1 * 10) % (m1 + m2) !== 0);
+        const vf = (m1 * v1) / (m1 + m2); // exact, at most 1 decimal place
+        const before = 0.5 * m1 * v1 * v1;
+        const after = Number((0.5 * (m1 + m2) * vf * vf).toFixed(6));
+        const lost = Number((before - after).toFixed(6));
         return {
           prompt: L(o, `A ${m1} kg trolley at ${v1} m/s collides with a stationary ${m2} kg trolley and they couple together. How much kinetic energy is lost in the collision?`,
             `عربة كتلتها ${nu(m1, 'kg')} تسير بسرعة ${nu(v1, 'm/s')} تصطدم بعربة ساكنة كتلتها ${nu(m2, 'kg')} فتلتحمان. ما مقدار الطاقة الحركية المفقودة في التصادم؟`),
           answer: lost, unit: 'J', mistakes: [before, after, 2 * lost],
-          explanation: L(o, `Momentum gives v = ${m1} × ${v1} / ${m1 + m2} = ${fmt(vf)} m/s. KE before = ${fmt(before)} J, KE after = ½ × ${m1 + m2} × ${fmt(vf)}² = ${fmt(after)} J. Lost = ${fmt(lost)} J (turned into heat and sound).`,
-            `من حفظ الزخم: ${iso(`v = ${m1} × ${v1} / ${m1 + m2} = ${fmt(vf)} m/s`)}. الطاقة الحركية قبل ${iso(`= ${fmt(before)} J`)}، وبعد ${iso(`= ½ × ${m1 + m2} × ${fmt(vf)}² = ${fmt(after)} J`)}. المفقود ${iso(`= ${fmt(lost)} J`)} (تحوّل إلى حرارة وصوت).`),
+          explanation: L(o, `Momentum gives v = ${m1} × ${v1} / ${m1 + m2} = ${ex(vf)} m/s. KE before = ½ × ${m1} × ${v1}² = ${ex(before)} J, KE after = ½ × ${m1 + m2} × ${ex(vf)}² = ${ex(after)} J. Lost = ${ex(before)} − ${ex(after)} = ${fmt(lost)} J (turned into heat and sound).`,
+            `من حفظ الزخم: ${iso(`v = ${m1} × ${v1} / ${m1 + m2} = ${ex(vf)} m/s`)}. الطاقة الحركية قبل ${iso(`= ½ × ${m1} × ${v1}² = ${ex(before)} J`)}، وبعد ${iso(`= ½ × ${m1 + m2} × ${ex(vf)}² = ${ex(after)} J`)}. المفقود ${iso(`= ${ex(before)} − ${ex(after)} = ${fmt(lost)} J`)} (تحوّل إلى حرارة وصوت).`),
         };
       }),
     ],
@@ -780,38 +814,41 @@
       }),
       gen(3, 'R = R₁ + (R₂·R₃)/(R₂ + R₃)', function mixedCircuit(o) {
         const V = pick([6, 9, 12, 24]), R1 = rand(2, 20), R2 = rand(4, 40, 2), R3 = rand(4, 40, 2);
-        const Rp = (R2 * R3) / (R2 + R3);
-        const I = V / (R1 + Rp);
+        const Rp = r4((R2 * R3) / (R2 + R3));
+        const Rt = r4(R1 + Rp);
+        const I = V / Rt;
         return {
           prompt: L(o, `A ${V} V battery is connected to a ${R1} Ω resistor in series with a parallel pair of ${R2} Ω and ${R3} Ω. What current does the battery supply?`,
             `بطارية ${nu(V, 'V')} موصولة بمقاوم ${nu(R1, 'Ω')} على التوالي مع مقاومين على التوازي ${nu(R2, 'Ω')} و${nu(R3, 'Ω')}. ما التيار الذي تزوّده البطارية؟`),
           answer: I, unit: 'A', mistakes: [V / (R1 + R2 + R3), V / R1, V / Rp],
-          explanation: L(o, `Parallel pair: ${R2}·${R3}/(${R2}+${R3}) = ${fmt(Rp)} Ω. Total = ${R1} + ${fmt(Rp)} = ${fmt(R1 + Rp)} Ω. I = V/R = ${V} / ${fmt(R1 + Rp)} = ${fmt(I)} A.`,
-            `المقاومان على التوازي: ${iso(`${R2}·${R3}/(${R2}+${R3}) = ${fmt(Rp)} Ω`)}. المقاومة الكلية ${iso(`= ${R1} + ${fmt(Rp)} = ${fmt(R1 + Rp)} Ω`)}. ${iso(`I = V/R = ${V} / ${fmt(R1 + Rp)} = ${fmt(I)} A`)}.`),
+          explanation: L(o, `Parallel pair: ${R2} × ${R3} / (${R2} + ${R3}) = ${f4(Rp)} Ω. Total = ${R1} + ${f4(Rp)} = ${f4(Rt)} Ω. I = V/R = ${V} / ${f4(Rt)} = ${fmt(I)} A.`,
+            `المقاومان على التوازي: ${iso(`${R2} × ${R3} / (${R2} + ${R3}) = ${f4(Rp)} Ω`)}. المقاومة الكلية ${iso(`= ${R1} + ${f4(Rp)} = ${f4(Rt)} Ω`)}. ${iso(`I = V/R = ${V} / ${f4(Rt)} = ${fmt(I)} A`)}.`),
         };
       }),
       gen(3, 'P = I²·R', function seriesPower(o) {
         const V = pick([6, 9, 12, 24]), R1 = rand(2, 30), R2 = rand(2, 30);
-        const I = V / (R1 + R2);
+        const I = r4(V / (R1 + R2));
         const P = I * I * R1;
         return {
           prompt: L(o, `A ${R1} Ω and a ${R2} Ω resistor are in series with a ${V} V battery. How much power is dissipated in the ${R1} Ω resistor?`,
             `مقاومان ${nu(R1, 'Ω')} و${nu(R2, 'Ω')} على التوالي مع بطارية ${nu(V, 'V')}. ما القدرة المستهلكة في المقاوم ${nu(R1, 'Ω')}؟`),
           answer: P, unit: 'W', mistakes: [(V * V) / R1, (V * V) / (R1 + R2), I * R1],
-          explanation: L(o, `Current is the same everywhere in series: I = ${V} / (${R1} + ${R2}) = ${fmt(I)} A. P = I²·R = ${fmt(I)}² × ${R1} = ${fmt(P)} W. Using V²/R with the full ${V} V is wrong: the ${R1} Ω resistor doesn't get all of it.`,
-            `التيار نفسه في كل أجزاء دائرة التوالي: ${iso(`I = ${V} / (${R1} + ${R2}) = ${fmt(I)} A`)}. ${iso(`P = I²·R = ${fmt(I)}² × ${R1} = ${fmt(P)} W`)}. استخدام ${iso('V²/R')} مع الجهد الكامل ${nu(V, 'V')} خطأ، فالمقاوم لا يأخذ الجهد كله.`),
+          explanation: L(o, `Current is the same everywhere in series: I = ${V} / (${R1} + ${R2}) = ${f4(I)} A. P = I²·R = ${f4(I)}² × ${R1} = ${fmt(P)} W. Using V²/R with the full ${V} V is wrong: the ${R1} Ω resistor doesn't get all of it.`,
+            `التيار نفسه في كل أجزاء دائرة التوالي: ${iso(`I = ${V} / (${R1} + ${R2}) = ${f4(I)} A`)}. ${iso(`P = I²·R = ${f4(I)}² × ${R1} = ${fmt(P)} W`)}. استخدام ${iso('V²/R')} مع الجهد الكامل ${nu(V, 'V')} خطأ، فالمقاوم لا يأخذ الجهد كله.`),
         };
       }),
       gen(3, 'V = E − I·r', function internalResistance(o) {
         const E = pick([1.5, 3, 4.5, 6, 9, 12]), r = rand(0.2, 2, 0.1), R = rand(2, 20);
-        const I = E / (R + r);
-        const V = I * R;
+        const Rt = Number((R + r).toFixed(6));
+        const I = r4(E / Rt);
+        const lostV = r4(I * r);
+        const V = E - lostV;
         return {
           prompt: L(o, `A battery with EMF ${E} V and internal resistance ${r} Ω is connected to a ${R} Ω lamp. What is the voltage across the lamp?`,
             `بطارية قوتها الدافعة الكهربائية ${nu(E, 'V')} ومقاومتها الداخلية ${nu(r, 'Ω')} موصولة بمصباح مقاومته ${nu(R, 'Ω')}. ما فرق الجهد بين طرفي المصباح؟`),
-          answer: V, unit: 'V', mistakes: [E, I * r, I],
-          explanation: L(o, `I = E / (R + r) = ${E} / ${fmt(R + r)} = ${fmt(I)} A. Some voltage is "lost" inside the battery: V = E − I·r = ${E} − ${fmt(I * r)} = ${fmt(V)} V.`,
-            `${iso(`I = E / (R + r) = ${E} / ${fmt(R + r)} = ${fmt(I)} A`)}. جزء من الجهد "يضيع" داخل البطارية: ${iso(`V = E − I·r = ${E} − ${fmt(I * r)} = ${fmt(V)} V`)}.`),
+          answer: V, unit: 'V', mistakes: [E, lostV, I],
+          explanation: L(o, `I = E / (R + r) = ${E} / ${ex(Rt)} = ${f4(I)} A. Some voltage is "lost" inside the battery: I·r = ${f4(I)} × ${r} = ${f4(lostV)} V, so V = E − I·r = ${E} − ${f4(lostV)} = ${fmt(V)} V.`,
+            `${iso(`I = E / (R + r) = ${E} / ${ex(Rt)} = ${f4(I)} A`)}. جزء من الجهد "يضيع" داخل البطارية: ${iso(`I·r = ${f4(I)} × ${r} = ${f4(lostV)} V`)}، إذن ${iso(`V = E − I·r = ${E} − ${f4(lostV)} = ${fmt(V)} V`)}.`),
         };
       }),
     ],
@@ -1075,7 +1112,7 @@
   const api = {
     G, TOPICS, DIFFICULTIES, DIFF, GENERATORS, CONCEPTS, FORMULAS,
     generate, fromGenerator, findGenerator, pickWeightedTopic,
-    fmt, iso, nu, L, rand, pick, shuffle, gen,
+    fmt, plain, sci, iso, nu, L, rand, pick, shuffle, gen,
     numeric, typed, conceptual, parseAnswer, checkTyped,
   };
 

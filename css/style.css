@@ -460,6 +460,19 @@ select { font: inherit; padding: 4px 8px; border-radius: 8px; border: 1px solid 
 .typed.correct .typed-field { border-color: var(--good); background: var(--good-soft); }
 .typed.wrong .typed-field { border-color: var(--bad); background: var(--bad-soft); }
 .typed-help { flex-basis: 100%; margin: 0; }
+.typed-keys { display: flex; gap: 6px; direction: ltr; }
+.key-btn {
+  min-width: 48px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.key-btn:hover { border-color: var(--accent); }
+.key-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .best-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }

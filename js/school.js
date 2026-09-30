@@ -8,7 +8,7 @@
   'use strict';
 
   const Q = typeof module !== 'undefined' && module.exports ? require('./questions.js') : root.PhysicsQuestions;
-  const { iso, nu, L, rand, pick, fmt, gen, shuffle } = Q;
+  const { iso, nu, L, rand, pick, fmt, plain, gen, shuffle } = Q;
 
   const G_SCHOOL = 10;
   const RULES = {
@@ -47,14 +47,14 @@
         return {
           prompt: L(o, `How many seconds are there in ${min} minutes?`, `كم ثانية في ${iso(min)} دقيقة؟`),
           answer: min * 60, unit: 's', mistakes: [min * 100, min / 60, min * 3600],
-          explanation: L(o, `1 minute = 60 s, so ${min} × 60 = ${min * 60} s.`, `الدقيقة = ${nu(60, 's')}، إذن ${iso(`${min} × 60 = ${min * 60} s`)}.`),
+          explanation: L(o, `1 minute = 60 s, so ${min} × 60 = ${fmt(min * 60)} s.`, `الدقيقة = ${nu(60, 's')}، إذن ${iso(`${min} × 60 = ${fmt(min * 60)} s`)}.`),
         };
       }
       const h = rand(1, 5);
       return {
         prompt: L(o, `How many seconds are there in ${h} hour${h > 1 ? 's' : ''}?`, `كم ثانية في ${iso(h)} ساعة؟`),
         answer: h * 3600, unit: 's', mistakes: [h * 60, h * 100, h * 1000],
-        explanation: L(o, `1 hour = 60 × 60 = 3600 s, so ${h} × 3600 = ${h * 3600} s.`, `الساعة = ${iso('60 × 60 = 3600 s')}، إذن ${iso(`${h} × 3600 = ${h * 3600} s`)}.`),
+        explanation: L(o, `1 hour = 60 × 60 = 3600 s, so ${h} × 3600 = ${fmt(h * 3600)} s.`, `الساعة = ${iso('60 × 60 = 3600 s')}، إذن ${iso(`${h} × 3600 = ${fmt(h * 3600)} s`)}.`),
       };
     }),
     massConvert: gen(1, '1 g = 0.001 kg', function massConvert(o) {
@@ -127,6 +127,35 @@
       };
     }),
   };
+
+  // Numbers for the powers-of-ten lesson: a × 10ⁿ with a from 1.1 to 9.9.
+  function sciNumber() {
+    const a = rand(1.1, 9.9, 0.1);
+    const n = pick([3, 3, 4, 4, 5, 6, -3, -4]);
+    return { a, n, x: Number((a * Math.pow(10, n)).toPrecision(6)) };
+  }
+  Object.assign(SCHOOL_GENERATORS, {
+    toScientific: gen(1, 'a × 10ⁿ,  1 ≤ a < 10', function toScientific(o) {
+      const { a, n, x } = sciNumber();
+      const moves = Math.abs(n);
+      return {
+        prompt: L(o, `Write ${plain(x)} in scientific notation.`, `اكتب العدد ${iso(plain(x))} بالصيغة العلمية.`),
+        answer: x, unit: '', format: 'sci', mistakes: [x * 10, x / 10, n > 0 ? x * 100 : x / 100],
+        explanation: L(o, `Move the decimal point ${moves} place${moves > 1 ? 's' : ''} ${n > 0 ? 'left' : 'right'} to get ${a}, a number between 1 and 10. So ${plain(x)} = ${fmt(x)}.`,
+          `حرّك الفاصلة العشرية ${iso(moves)} ${moves > 2 ? 'منازل' : 'منزلة'} إلى ${n > 0 ? 'اليسار' : 'اليمين'} لتحصل على ${iso(a)}، وهو عدد بين 1 و10. إذن ${iso(`${plain(x)} = ${fmt(x)}`)}.`),
+      };
+    }),
+    fromScientific: gen(1, '10³ = 1000,  10⁻³ = 0.001', function fromScientific(o) {
+      const { a, n, x } = sciNumber();
+      const sci = fmt(x);
+      return {
+        prompt: L(o, `What is ${sci} written as an ordinary number?`, `ما العدد ${iso(sci)} مكتوبًا بالشكل العادي؟`),
+        answer: x, unit: '', format: 'plain', mistakes: [x * 10, x / 10, n > 0 ? x / 100 : x * 100],
+        explanation: L(o, `10${fmt(Math.pow(10, n)).split('10')[1]} ${n > 0 ? `means × ${plain(Math.pow(10, n))}` : `means ÷ ${plain(Math.pow(10, -n))}`}, so ${sci} = ${plain(x)}.`,
+          `${iso('10' + fmt(Math.pow(10, n)).split('10')[1])} تعني ${n > 0 ? iso('× ' + plain(Math.pow(10, n))) : iso('÷ ' + plain(Math.pow(10, -n)))}، إذن ${iso(`${sci} = ${plain(x)}`)}.`),
+      };
+    }),
+  });
 
   // ---------- content helpers ----------
   const ck = (enPrompt, enChoices, enExp, arPrompt, arChoices, arExp) => ({
@@ -223,6 +252,38 @@
           ],
         },
         {
+          id: 'powers-of-ten', title: tt('Powers of ten', 'قوى العشرة (الصيغة العلمية)'),
+          cards: [
+            card('Physics deals with huge and tiny numbers. Writing 150 000 000 000 m (the distance from the Sun to Earth) is tiring and easy to get wrong. So we use <b>powers of ten</b>: <code>10³ = 10 × 10 × 10 = 1000</code>. The small raised number, the <b>exponent</b>, tells you how many zeros.',
+              `تتعامل الفيزياء مع أعداد ضخمة وأخرى صغيرة جدًا. كتابة ${x('150 000 000 000 m')} (المسافة بين الشمس والأرض) متعبة وسهلة الخطأ. لذلك نستخدم <b>قوى العشرة</b>: <code>10³ = 10 × 10 × 10 = 1000</code>. العدد الصغير المرفوع، أي <b>الأُس</b>، يخبرك بعدد الأصفار.`),
+            card('<b>Scientific notation</b> writes a number as <code>a × 10ⁿ</code>, where a is between 1 and 10. So <code>2500 = 2.5 × 10³</code> and <code>150 000 000 000 = 1.5 × 10¹¹</code>. In this game, every answer of 1000 or more is written this way.',
+              '<b>الصيغة العلمية</b> تكتب العدد على الشكل <code>a × 10ⁿ</code>، حيث a عدد بين 1 و10. إذن <code>2500 = 2.5 × 10³</code> و<code>150 000 000 000 = 1.5 × 10¹¹</code>. في هذه اللعبة تُكتب كل إجابة قيمتها 1000 أو أكثر بهذه الطريقة.'),
+            card('Negative exponents are for small numbers: <code>10⁻³ = 1/1000 = 0.001</code>, so <code>0.004 = 4 × 10⁻³</code>. The prefixes you will meet next are powers of ten too: kilo = 10³ and milli = 10⁻³.',
+              'الأُسس السالبة للأعداد الصغيرة: <code>10⁻³ = 1/1000 = 0.001</code>، إذن <code>0.004 = 4 × 10⁻³</code>. والبادئات التي ستتعلمها في الدرس التالي هي أيضًا قوى للعشرة: كيلو = <code>10³</code> وملّي = <code>10⁻³</code>.'),
+            example('<b>Example:</b> write 4700 J in scientific notation. Move the decimal point 3 places left to get 4.7, so <code>4700 J = 4.7 × 10³ J</code>. To type it in Hardcore mode, write <code>4.7e3</code>, <code>4.7x10^3</code> or tap the <b>×10ⁿ</b> button.',
+              `<b>مثال:</b> اكتب ${x('4700 J')} بالصيغة العلمية. حرّك الفاصلة العشرية 3 منازل إلى اليسار لتحصل على 4.7، إذن <code>4700 J = 4.7 × 10³ J</code>. لكتابتها في مستوى هاردكور اكتب <code>4.7e3</code> أو <code>4.7x10^3</code> أو اضغط زر <b>${x('×10ⁿ')}</b>.`),
+          ],
+          practice: ['school:toScientific', 'school:fromScientific'],
+          checks: [
+            ck('What is 10³?', ['1000', '30', '100', '10 000'],
+              'Three tens multiplied together: 10 × 10 × 10 = 1000.',
+              `ما قيمة ${iso('10³')}؟`, ['1000', '30', '100', '10 000'],
+              `ثلاث عشرات مضروبة معًا: ${iso('10 × 10 × 10 = 1000')}.`),
+            ck('How is 6000 written in scientific notation?', ['6 × 10³', '6 × 10⁴', '6 × 10²', '0.6 × 10²'],
+              '6000 = 6 × 1000 = 6 × 10³.',
+              `كيف يُكتب العدد ${iso('6000')} بالصيغة العلمية؟`, ['6 × 10³', '6 × 10⁴', '6 × 10²', '0.6 × 10²'],
+              `${iso('6000 = 6 × 1000 = 6 × 10³')}.`),
+            ck('Which number is the same as 5 × 10⁻³?', ['0.005', '0.05', '5000', '0.0005'],
+              '10⁻³ means divide by 1000: 5 ÷ 1000 = 0.005.',
+              `أي عدد يساوي ${iso('5 × 10⁻³')}؟`, ['0.005', '0.05', '5000', '0.0005'],
+              `${iso('10⁻³')} تعني القسمة على 1000: ${iso('5 ÷ 1000 = 0.005')}.`),
+            ck('Which is bigger: 3 × 10⁴ or 9 × 10³?', ['3 × 10⁴', '9 × 10³', 'They are equal', "You can't tell"],
+              '3 × 10⁴ = 30 000 and 9 × 10³ = 9000. Compare the powers of ten first.',
+              `أيهما أكبر: ${iso('3 × 10⁴')} أم ${iso('9 × 10³')}؟`, ['3 × 10⁴', '9 × 10³', 'متساويان', 'لا يمكن المعرفة'],
+              `${iso('3 × 10⁴ = 30 000')} و${iso('9 × 10³ = 9000')}. قارن قوى العشرة أولًا.`),
+          ],
+        },
+        {
           id: 'conversions', title: tt('Prefixes and conversions', 'البادئات وتحويل الوحدات'),
           cards: [
             card('Big and small numbers use <b>prefixes</b>: <b>kilo (k)</b> = 1000, <b>centi (c)</b> = 1/100, <b>milli (m)</b> = 1/1000. So <code>1 km = 1000 m</code>, <code>1 cm = 0.01 m</code> and <code>1 g = 0.001 kg</code>.',
@@ -231,8 +292,8 @@
               `الزمن: <code>1 min = 60 s</code> و<code>1 h = 60 min = 3600 s</code>. قبل استخدام أي قانون، حوّل كل شيء إلى الوحدات الدولية (${x('m، kg، s')}).`),
             card('A handy trick: to turn <b>km/h into m/s, divide by 3.6</b> (because <code>1000 m ÷ 3600 s = 1/3.6</code>). A car at 72 km/h moves at <code>72 ÷ 3.6 = 20 m/s</code>.',
               `حيلة مفيدة: لتحويل <b>${x('km/h')} إلى ${x('m/s')} اقسم على 3.6</b> (لأن <code>1000 m ÷ 3600 s = 1/3.6</code>). سيارة سرعتها ${x('72 km/h')} تتحرك بسرعة <code>72 ÷ 3.6 = 20 m/s</code>.`),
-            example('<b>Example:</b> convert 2.5 km to metres. Kilo means 1000, so <code>2.5 × 1000 = 2500 m</code>. Convert 3 minutes to seconds: <code>3 × 60 = 180 s</code>.',
-              `<b>مثال:</b> حوّل ${x('2.5 km')} إلى أمتار. كيلو تعني 1000، إذن <code>2.5 × 1000 = 2500 m</code>. حوّل 3 دقائق إلى ثوانٍ: <code>3 × 60 = 180 s</code>.`),
+            example('<b>Example:</b> convert 2.5 km to metres. Kilo means 1000, so <code>2.5 × 1000 = 2500 m = 2.5 × 10³ m</code>. Convert 3 minutes to seconds: <code>3 × 60 = 180 s</code>.',
+              `<b>مثال:</b> حوّل ${x('2.5 km')} إلى أمتار. كيلو تعني 1000، إذن <code>2.5 × 1000 = 2500 m = 2.5 × 10³ m</code>. حوّل 3 دقائق إلى ثوانٍ: <code>3 × 60 = 180 s</code>.`),
           ],
           practice: ['school:lengthConvert', 'school:timeConvert', 'school:massConvert', 'school:speedConvert'],
           checks: [

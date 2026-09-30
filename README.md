@@ -17,11 +17,11 @@ Switch between English and العربية with the button in the top bar (or in 
 
 ## 🎓 School mode
 
-For people who barely know any physics yet. 7 units and 20 lessons:
+For people who barely know any physics yet. 7 units and 21 lessons:
 
 | Unit | Lessons |
 | --- | --- |
-| 📏 Measurement | What is physics? · SI units · Prefixes and conversions |
+| 📏 Measurement | What is physics? · SI units · Powers of ten · Prefixes and conversions |
 | 🏃 Motion | Speed · Acceleration · Falling objects |
 | 🧲 Forces | What is a force? · Newton's second law · Weight, friction and action–reaction |
 | ⚡ Energy | What is energy? · Kinetic and potential energy · Work and power |
@@ -32,7 +32,7 @@ For people who barely know any physics yet. 7 units and 20 lessons:
 - **Teaching:** each lesson is a few short cards plus a worked example.
 - **Exercises:** 5 questions with the formula shown and an explanation after each one. Get 4 right to pass (⭐⭐), or 5 for ⭐⭐⭐. Passing unlocks the next lesson.
 - **Unit exams:** 8 questions from the unit, no hints and results only at the end. You need 75% to unlock the next unit.
-- **Final exam:** 20 questions covering every lesson. Pass with 70% to **graduate** 🥳 and get a certificate with your name.
+- **Final exam:** 20 questions spread across all the lessons. Pass with 70% to **graduate** 🥳 and get a certificate with your name.
 
 ## Difficulty levels
 
@@ -55,7 +55,9 @@ Pick one on the Home, Quiz or Lab screen. You can switch any time.
 | 📐 **Formulas** | A formula sheet for every topic |
 | 📈 **Progress** | XP and levels, a daily goal, a day streak, and topic mastery based on your last 20 answers |
 
-Every answer comes with a worked explanation, and wrong options are built from **common mistakes** (like forgetting the ½ in ½mv² or averaging two speeds), so you learn to spot the traps.
+Every answer comes with a worked explanation whose steps you can check by hand, and wrong options are built from **common mistakes** (like forgetting the ½ in ½mv² or averaging two speeds), so you learn to spot the traps.
+
+**Numbers:** answers of 1000 or more (and below 0.01) are written with powers of ten, like `2.4 × 10³`, and are rounded to 3 significant figures. In Hardcore, type them as `2.4×10^3` or `2.4e3`, or use the **×10ⁿ** button (phone keypads have no ×, ^ or e). Arabic digits like ٢٫٤ work too.
 
 **Tips:** press `1`–`4` to answer and `Enter` to go to the next question. Use g = 9.8 m/s².
 
@@ -79,4 +81,6 @@ tests/              checks every generated question, both languages and the whol
 - **Arabic text:** wrap formulas and "number unit" pairs in `iso(...)` / `nu(value, unit)` so they stay left-to-right inside Arabic sentences.
 - **New lesson:** add it to a unit in `js/school.js` with `cards`, `practice` (generator names) and `checks`.
 
-Run `npm test` afterwards to check that everything still generates correctly.
+Multi-step explanations must add up with the numbers they show: use exact values (`ex`) or round an intermediate with `r4` and keep using that rounded value in the next step.
+
+Run `npm test` afterwards. Among other things it recomputes every step of every worked explanation.

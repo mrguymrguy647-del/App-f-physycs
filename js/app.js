@@ -382,6 +382,7 @@
   const examPassed = (unitId) => !!(examRecord(unitId) && examRecord(unitId).passed);
   const unitUnlocked = (ui) => ui === 0 || examPassed(S.UNITS[ui - 1].id);
   function lessonUnlocked(lesson) {
+    if (lessonDone(lesson.id)) return true; // finished lessons stay open, even if a new lesson is added before them
     if (!unitUnlocked(lesson.unitIndex)) return false;
     if (lesson.indexInUnit === 0) return true;
     return lessonDone(S.UNITS[lesson.unitIndex].lessons[lesson.indexInUnit - 1].id);
@@ -683,6 +684,18 @@
     const q = round.current;
     resolve(Q.checkTyped(q, text), text + (q.unit ? ' ' + q.unit : ''), {});
   });
+
+  // Helper keys for phone keypads, which can't type × ^ or −.
+  document.querySelectorAll('.key-btn').forEach((b) => b.addEventListener('click', () => {
+    const input = $('q-input');
+    if (input.disabled) return;
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    input.value = input.value.slice(0, start) + b.dataset.insert + input.value.slice(end);
+    const pos = start + b.dataset.insert.length;
+    input.focus();
+    try { input.setSelectionRange(pos, pos); } catch (e) { /* ignore */ }
+  }));
 
   $('q-peek').addEventListener('click', () => {
     if (!round || round.answered) return;
